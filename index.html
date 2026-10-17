@@ -157,13 +157,14 @@
 <script>
 // ---- Config ----
 const PLAYLIST = 'https://iptv-org.github.io/iptv/index.m3u';
-// If a stream/playlist is blocked by CORS, set a proxy, e.g. 'https://your-proxy.example/?url='
+// Optional CORS proxy, used automatically when a stream is blocked. Deploy cors-proxy-worker.js, then e.g. 'https://jb-proxy.yourname.workers.dev/?url='
 const PROXY = '';
 const LANG_PLAYLIST = 'https://iptv-org.github.io/iptv/index.language.m3u'; // used for the language filter
 const PAGE = 60;
 const SKEL = '<div><div class="aspect-video rounded-xl shimmer"></div><div class="h-3 w-4/5 mt-3 rounded shimmer"></div><div class="h-3 w-2/5 mt-2 rounded shimmer"></div></div>';
 const $ = id => document.getElementById(id);
-const url = x => PROXY ? PROXY + encodeURIComponent(x) : x;
+const url = x => location.protocol === 'https:' ? x.replace(/^http:/, 'https:') : x; // try https on secure pages
+const viaProxy = x => PROXY + encodeURIComponent(x);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 const P = {
@@ -310,11 +311,21 @@ const endHold = () => { clearTimeout(holdT); if (held) { stopPreview(); setTimeo
 ['pointerup', 'pointercancel'].forEach(t => document.addEventListener(t, endHold));
 
 // ---- Playback ----
-function startStream(c) {
+function netMsg(c, d) {
+  const code = d.response && d.response.code, hint = PROXY ? '' : ' Set up the CORS proxy (cors-proxy-worker.js) to unlock more channels.';
+  if (code === 404 || code === 410) return 'This channel is offline (stream not found).';
+  if (code === 401 || code === 403) return `The stream server refused access (${code}).`;
+  if (code >= 500) return `The stream server has a problem (${code}). Try again later.`;
+  if (/^http:/.test(c.url) && location.protocol === 'https:') return 'This stream is HTTP-only (or offline), so it cannot play on an HTTPS site.' + hint;
+  return 'This stream blocks browser playback (CORS) or is offline.' + hint;
+}
+// Tries the direct stream first, then the CORS proxy (if configured)
+function startStream(c, n = 0) {
   cur = c; $('err').classList.add('hidden'); spin(true);
   if (hls) { hls.destroy(); hls = null; }
   renderAudio();
-  const src = url(c.url);
+  const list = [url(c.url)]; if (PROXY) list.push(viaProxy(c.url));
+  const src = list[n], next = () => n + 1 < list.length && (startStream(c, n + 1), true);
   if (window.Hls && Hls.isSupported()) {
     hls = new Hls({ enableWorker: true, lowLatencyMode: true });
     hls.loadSource(src); hls.attachMedia(v);
@@ -323,15 +334,21 @@ function startStream(c) {
     hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => {}));
     hls.on(Hls.Events.ERROR, (_, d) => {
       if (!d.fatal) return;
-      if (d.type === Hls.ErrorTypes.NETWORK_ERROR) fail('Network/CORS error – this stream may be offline, blocked, or HTTP-only (blocked on HTTPS pages).');
+      if (d.type === Hls.ErrorTypes.NETWORK_ERROR) { if (!next()) fail(netMsg(c, d)); }
       else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
-      else fail('Playback failed. Try another channel.');
+      else if (!next()) fail('Playback failed. Try another channel.');
     });
   } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
     v.src = src; v.play().catch(() => {});
+    v.onerror = () => { if (!next()) fail(netMsg(c, {})); };
   } else fail('HLS is not supported in this browser.');
 }
-function fail(m) { spin(false); $('err').textContent = m; $('err').classList.remove('hidden'); }
+function fail(m) {
+  spin(false);
+  $('err').innerHTML = `<div class="max-w-sm"><p>${m}</p><button id="retry" class="btn mt-3 !text-white mx-auto">Retry</button></div>`;
+  $('err').classList.remove('hidden');
+}
+$('err').onclick = e => { if (e.target.closest('#retry') && cur) startStream(cur); };
 
 function setMode(m) {
   mode = m;
