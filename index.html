@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JB TV – Live IPTV</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js"></script>
+<style>
+  :root{--bg:#0f0f0f;--fg:#f1f1f1;--card:#1f1f1f;--chip:#272727;--chiph:#3f3f3f;--bord:#ffffff2e;--input:#121212;--muted:#9ca3af}
+  html.light{--bg:#ffffff;--fg:#0f0f0f;--card:#ececec;--chip:#f0f0f0;--chiph:#e0e0e0;--bord:#00000026;--input:#ffffff;--muted:#606060}
+  body{background:var(--bg);color:var(--fg);font-family:Roboto,system-ui,sans-serif;transition:background .2s,color .2s}
+  .t-bg{background:var(--bg)}.t-bg2{background:color-mix(in srgb,var(--bg) 95%,transparent)}
+  .t-card{background:var(--card)}.t-chip{background:var(--chip);color:var(--fg)}
+  .t-input{background:var(--input);color:var(--fg)}.t-bord{border-color:var(--bord)!important}.t-muted{color:var(--muted)}
+  ::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:6px}
+  input[type=range]{accent-color:#ff0000;cursor:pointer}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;padding:.45rem .7rem;border-radius:9999px;background:var(--chip);font-size:.9rem;line-height:1;transition:transform .15s,background .2s}
+  .btn:hover{background:var(--chiph);transform:translateY(-1px)}.btn:active{transform:scale(.9)}
+  .t-input{transition:box-shadow .2s,border-color .2s}.t-input:focus{box-shadow:0 0 0 3px #3b82f640}
+  .thumb{transition:transform .25s,box-shadow .25s}
+  article:hover .thumb{transform:translateY(-4px) scale(1.02);box-shadow:0 12px 28px #0006}
+  #grid article,#related article{animation:rise .5s cubic-bezier(.2,.8,.2,1) both}
+  .enter{animation:enter .4s cubic-bezier(.2,.8,.2,1)}.pop{animation:pop .4s cubic-bezier(.34,1.56,.64,1)}
+  .bump{animation:bump .35s}.spin-once{animation:spinOnce .5s}.brand{animation:glow 2.5s infinite}
+  .dot{width:6px;height:6px;border-radius:50%;background:#fff;animation:blink 1.2s infinite}
+  @keyframes rise{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}
+  @keyframes enter{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:none}}
+  @keyframes pop{from{opacity:0;transform:scale(.6) translateY(20px)}to{opacity:1;transform:none}}
+  @keyframes bump{40%{transform:translate(-50%,-50%) scale(1.25)}}
+  @keyframes spinOnce{to{transform:rotate(360deg)}}
+  @keyframes glow{50%{box-shadow:0 0 14px #ef4444aa}}
+  @keyframes blink{50%{opacity:.25}}
+    .menu-in{animation:menuIn .18s ease-out;transform-origin:bottom right}
+  @keyframes menuIn{from{opacity:0;transform:translateY(6px) scale(.96)}}
+  .pv{animation:fade .25s}@keyframes fade{from{opacity:0}}
+  #grid article,#related article{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+  #grid img,#related img{-webkit-user-drag:none}
+  header{animation:dropIn .5s cubic-bezier(.2,.8,.2,1) backwards}
+  @keyframes dropIn{from{transform:translateY(-100%);opacity:0}}
+  .btn{position:relative;overflow:hidden}
+  .ripple{position:absolute;border-radius:50%;background:currentColor;opacity:.25;transform:scale(0);animation:ripple .6s ease-out;pointer-events:none}
+  @keyframes ripple{to{transform:scale(2.5);opacity:0}}
+  .shimmer{background:linear-gradient(90deg,var(--card) 25%,var(--chiph) 50%,var(--card) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite linear}
+  @keyframes shimmer{to{background-position:-200% 0}}
+  .thumb img:not(.ld){opacity:0}.thumb img.ld{animation:imgIn .5s backwards}
+  @keyframes imgIn{from{opacity:0;transform:scale(.9)}}
+  .stag>*{animation:rise .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0)*70ms)}
+  .float{animation:float 3s ease-in-out infinite}@keyframes float{50%{transform:translateY(-6px)}}
+  .fade{animation:fade .25s}
+  #miniSlot{transition:left .35s cubic-bezier(.2,.8,.2,1),top .35s cubic-bezier(.2,.8,.2,1);touch-action:none;cursor:grab}
+  #miniSlot.dragging{transition:none;cursor:grabbing;box-shadow:0 20px 40px #0008}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  #stage .btn{background:#ffffff2e;color:#fff}#stage .btn:hover{background:#ffffff4d}
+  #ratio option{color:#000}
+  #frame{aspect-ratio:16/9;max-height:75vh;margin:0 auto}
+  .mini #frame{aspect-ratio:16/9!important;max-height:none!important;width:100%!important}
+  .mini #ctl,.mini #bigPlay{display:none}
+  #stage:not(.mini) #miniBar{display:none}
+  #stage:fullscreen{background:#000;display:flex;flex-direction:column;justify-content:center}
+  #stage:fullscreen #frame{width:100%;height:100%!important;max-height:none!important;aspect-ratio:auto!important}
+  #ctl{position:absolute;bottom:0;left:0;right:0;color:#fff;background:linear-gradient(transparent,#000d);transition:opacity .25s,transform .25s}
+  #bigPlay{transition:opacity .25s}
+  #stage.idle #ctl{opacity:0;transform:translateY(10px);pointer-events:none}
+  #stage.idle #bigPlay{opacity:0;pointer-events:none}
+  #stage.idle{cursor:none}
+  .line2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+</style>
+</head>
+<body>
+<header class="sticky top-0 z-30 t-bg2 backdrop-blur border-b t-bord px-3 py-2 flex flex-wrap items-center gap-2">
+  <div class="flex items-center gap-2 font-extrabold text-lg mr-2 tracking-tight"><img data-logo alt="JB TV logo" class="h-8 w-auto drop-shadow">JB TV</div>
+  <input id="q" type="search" placeholder="Search channels…" class="flex-1 min-w-[150px] max-w-xl t-input t-bord border rounded-full px-4 py-2 text-sm outline-none focus:border-blue-500">
+  <select id="cat" class="t-chip rounded-full px-3 py-2 text-sm outline-none max-w-[45%]"><option value="">All categories</option></select>
+  <select id="lang" class="hidden t-chip rounded-full px-3 py-2 text-sm outline-none max-w-[45%]" title="Language"><option value="">All languages</option></select>
+  <button id="aboutBtn" class="btn" title="About us" data-ic="info"><span class="hidden sm:inline">About</span></button>
+  <button id="theme" class="btn" title="Switch light/dark theme"></button>
+</header>
+
+<main class="p-3 sm:p-5">
+  <div id="status" class="text-center t-muted py-20"><img data-logo alt="" class="h-16 w-auto mx-auto mb-3 animate-pulse">Loading playlist…</div>
+  <div id="count" class="text-xs t-muted mb-3 hidden"></div>
+  <div id="grid" class="grid gap-x-4 gap-y-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"></div>
+  <div id="sentinel" class="h-1"></div>
+  <div class="text-center mt-8"><button id="more" class="btn hidden">Load more</button></div>
+</main>
+<footer class="text-center text-xs t-muted px-4 pb-10 pt-4">
+  JB TV · Streams come from public playlists and belong to their owners ·
+  <button id="aboutLink" class="underline hover:text-red-500 transition-colors">About us</button>
+</footer>
+
+<!-- Watch page -->
+<section id="watch" class="hidden fixed inset-0 z-40 t-bg overflow-y-auto">
+  <div class="max-w-6xl mx-auto p-2 sm:p-4">
+    <button id="back" class="btn mb-3" data-ic="back">Back</button>
+    <div id="watchSlot" class="bg-black rounded-xl overflow-hidden"></div>
+    <h1 id="wTitle" class="text-lg sm:text-xl font-semibold mt-3"></h1>
+    <p id="wMeta" class="text-sm t-muted"></p>
+    <h2 class="font-semibold mt-6 mb-3">More in this category</h2>
+    <div id="related" class="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"></div>
+  </div>
+</section>
+
+<!-- Mini player -->
+<div id="miniSlot" class="hidden fixed bottom-3 right-3 z-50 w-64 sm:w-80 rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/20 bg-black"></div>
+
+<!-- Player stage (single video element is moved between watch page and mini slot) -->
+<div id="about" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+  <div id="aboutCard" class="t-bg rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 shadow-2xl ring-1 ring-white/10 relative">
+    <button id="aboutClose" class="btn absolute top-3 right-3 !p-2" title="Close" data-ic="close"></button>
+    <div class="stag text-center">
+      <img data-logo alt="JB TV logo" class="h-20 w-auto mx-auto float" style="--i:0">
+      <h2 class="text-2xl font-extrabold mt-3" style="--i:1">About JB TV</h2>
+      <p class="text-sm t-muted mt-2" style="--i:2">JB TV is a free live-TV web player. Browse thousands of publicly available IPTV channels from around the world, search by name, filter by category or language, and watch in a fast, clean player.</p>
+    </div>
+    <ul class="stag mt-5 space-y-2 text-sm">
+      <li class="flex gap-2" style="--i:3"><span data-ic="check" class="text-red-500 shrink-0 mt-0.5"></span>Live previews on hover or press-and-hold</li>
+      <li class="flex gap-2" style="--i:4"><span data-ic="check" class="text-red-500 shrink-0 mt-0.5"></span>Draggable mini-player, Picture-in-Picture and fullscreen</li>
+      <li class="flex gap-2" style="--i:5"><span data-ic="check" class="text-red-500 shrink-0 mt-0.5"></span>Multiple audio tracks, brightness and aspect-ratio controls</li>
+      <li class="flex gap-2" style="--i:6"><span data-ic="check" class="text-red-500 shrink-0 mt-0.5"></span>Light and dark themes, responsive on every screen</li>
+    </ul>
+    <p class="stag mt-5 text-xs t-muted"><span style="--i:7">Shortcuts: <b>Space/K</b> play·pause, <b>F</b> fullscreen, <b>M</b> mute, <b>Esc</b> back.</span></p>
+    <p class="stag mt-4 text-xs t-muted rounded-xl t-card p-3"><span style="--i:8">JB TV does not host, store or upload any video. Channels come from the public iptv-org playlists and belong to their respective owners; some may be offline or region-locked. Player powered by HLS.js.</span></p>
+  </div>
+</div>
+<div id="parking" class="hidden">
+<div id="stage" class="relative bg-black">
+  <div id="frame" class="bg-black"><video id="v" class="w-full h-full object-contain" playsinline></video></div>
+  <div id="spin" class="hidden absolute inset-0 flex items-center justify-center pointer-events-none"><div class="w-12 h-12 rounded-full border-4 border-white/25 border-t-red-500 animate-spin"></div></div>
+  <div id="err" class="hidden absolute inset-0 flex items-center justify-center text-center p-4 bg-black/80 text-sm text-red-300"></div>
+  <div id="miniBar" class="absolute inset-x-0 top-0 flex justify-between p-1 bg-gradient-to-b from-black/80 to-transparent">
+    <span id="mTitle" class="text-xs truncate px-1 pt-1"></span>
+    <span class="flex gap-1"><button id="mPlay" class="btn !p-1.5"></button><button id="mOpen" class="btn !p-1.5" title="Expand" data-ic="expand"></button><button id="mClose" class="btn !p-1.5" title="Close" data-ic="close"></button></span>
+  </div>
+  <button id="bigPlay" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-black/60 text-white text-2xl hover:bg-black/80 inline-flex items-center justify-center"></button>
+  <div id="ctl" class="flex flex-wrap items-center gap-2 p-2 sm:p-3 text-sm">
+    <button id="play" class="btn" title="Play/Pause"></button>
+    <button id="mute" class="btn" title="Mute"></button>
+    <input id="vol" type="range" min="0" max="1" step="0.01" value="1" class="w-20 sm:w-28" title="Volume">
+    <label class="flex items-center gap-1 text-white/80" data-ic="sun"><input id="bri" type="range" min="0.3" max="1.8" step="0.05" value="1" class="w-20 sm:w-28" title="Brightness"></label>
+    <select id="ratio" class="bg-white/20 text-white rounded-full px-2 py-1.5" title="Aspect ratio">
+      <option value="16/9">16:9</option><option value="4/3">4:3</option>
+      <option value="fit">Fit to screen</option><option value="fill">Stretch</option>
+    </select>
+    <span class="flex-1"></span>
+    <div id="audWrap" class="relative hidden">
+      <button id="aud" class="btn" title="Audio track" data-ic="audio">Audio</button>
+      <div id="audMenu" class="hidden absolute bottom-full right-0 mb-2 min-w-[11rem] max-h-36 sm:max-h-56 overflow-y-auto rounded-xl bg-black/90 backdrop-blur p-1 text-sm shadow-xl ring-1 ring-white/15"></div>
+    </div>
+    <button id="pip" class="btn" title="Picture-in-Picture" data-ic="pip">PiP</button>
+    <button id="minib" class="btn" title="Mini player" data-ic="mini">Mini</button>
+    <button id="fs" class="btn" title="Fullscreen"></button>
+  </div>
+</div>
+
+</div>
+<script>
+// ---- Config ----
+const PLAYLIST = 'https://iptv-org.github.io/iptv/index.m3u';
+// If a stream/playlist is blocked by CORS, set a proxy, e.g. 'https://your-proxy.example/?url='
+const PROXY = '';
+const LANG_PLAYLIST = 'https://iptv-org.github.io/iptv/index.language.m3u'; // used for the language filter
+const PAGE = 60;
+const SKEL = '<div><div class="aspect-video rounded-xl shimmer"></div><div class="h-3 w-4/5 mt-3 rounded shimmer"></div><div class="h-3 w-2/5 mt-2 rounded shimmer"></div></div>';
+const $ = id => document.getElementById(id);
+const url = x => PROXY ? PROXY + encodeURIComponent(x) : x;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const P = {
+  play:'<polygon points="6 3 20 12 6 21" fill="currentColor"/>',
+  pause:'<rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/>',
+  volume:'<polygon points="11 5 6 9 2 9 2 15 6 15 11 19"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/>',
+  mute:'<polygon points="11 5 6 9 2 9 2 15 6 15 11 19"/><path d="M22 9l-6 6M16 9l6 6"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+  pip:'<rect x="2" y="4" width="20" height="16" rx="2"/><rect x="12" y="11" width="8" height="6" rx="1" fill="currentColor"/>',
+  mini:'<path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/>',
+  fs:'<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>',
+  fsExit:'<path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/>',
+  expand:'<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>',
+  close:'<path d="M18 6 6 18M6 6l12 12"/>',
+  back:'<path d="M19 12H5M12 19l-7-7 7-7"/>',
+  audio:'<path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/>',
+  info:'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>'
+};
+const ic = (n, s = 18) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
+const setIcon = (el, n, s) => el.innerHTML = ic(n, s);
+function re(el, c) { el.classList.remove(c); void el.offsetWidth; el.classList.add(c); } // restart CSS animation
+const spin = on => $('spin').classList.toggle('hidden', !on);
+
+let channels = [], filtered = [], shown = 0, cur = null, hls = null, mode = 'none';
+const v = $('v'), stage = $('stage');
+
+// ---- Playlist ----
+function attr(s, k) { const m = s.match(new RegExp(k + '="([^"]*)"')); return m ? m[1].trim() : ''; }
+function parseM3U(text) {
+  const out = []; let info = null;
+  for (const raw of text.split(/\r?\n/)) {
+    const l = raw.trim();
+    if (l.startsWith('#EXTINF')) {
+      info = { name: l.slice(l.lastIndexOf(',') + 1).trim() || attr(l, 'tvg-name') || 'Unknown',
+               logo: attr(l, 'tvg-logo'), langs: [],
+               cats: attr(l, 'group-title').split(';').map(s => s.trim()).filter(Boolean) };
+      if (!info.cats.length) info.cats = ['Uncategorized'];
+    } else if (info && l && !l.startsWith('#')) {
+      info.url = l; info.id = out.length; out.push(info); info = null;
+    }
+  }
+  return out;
+}
+async function load() {
+  try {
+    $('grid').innerHTML = SKEL.repeat(12);
+    const langReq = fetch(url(LANG_PLAYLIST)).then(x => x.ok ? x.text() : null).catch(() => null);
+    const r = await fetch(url(PLAYLIST));
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    channels = parseM3U(await r.text());
+    const cats = [...new Set(channels.flatMap(c => c.cats))].sort();
+    $('cat').insertAdjacentHTML('beforeend', cats.map(c => `<option>${esc(c)}</option>`).join(''));
+    $('status').classList.add('hidden');
+    applyFilter(); loadLangs(langReq);
+  } catch (e) {
+    $('grid').innerHTML = '';
+    $('status').innerHTML = `Could not load playlist (${esc(e.message)}).<br>Check your connection or set <code>PROXY</code> in the script.`;
+  }
+}
+
+async function loadLangs(req) {
+  const txt = await req; if (!txt) return; // language filter stays hidden if unavailable
+  const map = new Map();
+  parseM3U(txt).forEach(l => l.cats.forEach(g => {
+    const n = g === 'Undefined' ? 'Other' : g;
+    if (!map.has(l.url)) map.set(l.url, []);
+    map.get(l.url).push(n);
+  }));
+  channels.forEach(c => c.langs = [...new Set(map.get(c.url) || [])]);
+  const langs = [...new Set(channels.flatMap(c => c.langs))].sort();
+  if (!langs.length) return;
+  $('lang').insertAdjacentHTML('beforeend', langs.map(l => `<option>${esc(l)}</option>`).join(''));
+  $('lang').classList.remove('hidden'); re($('lang'), 'pop');
+}
+
+// ---- Grid ----
+function card(c, i = 0) {
+  const ini = esc(c.name.trim().slice(0, 2).toUpperCase());
+  return `<article data-id="${c.id}" class="cursor-pointer group" style="animation-delay:${Math.min(i, 24) * 30}ms">
+    <div class="relative aspect-video rounded-xl t-card flex items-center justify-center overflow-hidden thumb">
+      <span class="text-3xl font-bold text-gray-600">${ini}</span>
+      ${c.logo ? `<img src="${esc(c.logo)}" loading="lazy" referrerpolicy="no-referrer" onload="this.classList.add('ld')" onerror="this.remove()" class="absolute inset-0 w-full h-full object-contain p-4 t-card transition-transform duration-300 group-hover:scale-110">` : ''}
+      <span class="absolute bottom-1 right-1 z-10 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1"><i class="dot"></i>LIVE</span>
+    </div>
+    <h3 class="mt-2 text-sm font-medium line2">${esc(c.name)}</h3>
+    <p class="text-xs t-muted truncate">${esc(c.cats.join(' · '))}</p></article>`;
+}
+function applyFilter() {
+  const q = $('q').value.trim().toLowerCase(), cat = $('cat').value, lang = $('lang').value;
+  filtered = channels.filter(c => (!cat || c.cats.includes(cat)) && (!lang || c.langs.includes(lang)) && (!q || c.name.toLowerCase().includes(q)));
+  stopPreview(); $('grid').innerHTML = ''; shown = 0;
+  $('count').classList.remove('hidden'); $('count').textContent = `${filtered.length.toLocaleString()} channels`;
+  more();
+}
+function more() {
+  $('grid').insertAdjacentHTML('beforeend', filtered.slice(shown, shown + PAGE).map(card).join(''));
+  shown = Math.min(shown + PAGE, filtered.length);
+  $('more').classList.toggle('hidden', shown >= filtered.length);
+}
+let t; $('q').oninput = () => { clearTimeout(t); t = setTimeout(applyFilter, 200); };
+$('cat').onchange = $('lang').onchange = applyFilter;
+$('more').onclick = more;
+const clickCard = e => { if (held) return; const a = e.target.closest('article'); if (a) openWatch(channels[+a.dataset.id]); };
+$('grid').oncontextmenu = e => { if (matchMedia('(pointer: coarse)').matches && e.target.closest('article')) e.preventDefault(); };
+$('grid').onclick = clickCard; $('related').onclick = clickCard;
+
+// ---- Live preview on cards: hover (mouse) or press-and-hold (touch) ----
+let pv = null, hoverArt = null, hoverT = 0, holdT = 0, held = false;
+function stopPreview() { if (!pv) return; if (pv.hls) pv.hls.destroy(); pv.box.remove(); pv = null; }
+function startPreview(art) {
+  stopPreview();
+  const c = channels[+art.dataset.id]; if (!c || !art.isConnected) return;
+  const box = document.createElement('div');
+  box.className = 'pv absolute inset-0 z-[5] bg-black flex items-center justify-center';
+  box.innerHTML = '<video muted playsinline autoplay class="absolute inset-0 w-full h-full object-contain"></video><div class="w-7 h-7 rounded-full border-4 border-white/25 border-t-red-500 animate-spin"></div>';
+  art.querySelector('.thumb').appendChild(box);
+  const el = box.querySelector('video'), src = url(c.url);
+  el.addEventListener('playing', () => { const sp = box.querySelector('.animate-spin'); if (sp) sp.remove(); });
+  pv = { box, hls: null };
+  if (window.Hls && Hls.isSupported()) {
+    const h = pv.hls = new Hls({ startLevel: 0, capLevelToPlayerSize: true, maxBufferLength: 8 });
+    h.loadSource(src); h.attachMedia(el);
+    h.on(Hls.Events.MANIFEST_PARSED, () => el.play().catch(() => {}));
+    h.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) stopPreview(); });
+  } else if (el.canPlayType('application/vnd.apple.mpegurl')) { el.src = src; el.play().catch(() => {}); }
+}
+const CARD = '#grid article, #related article';
+document.addEventListener('pointerover', e => {
+  if (e.pointerType !== 'mouse') return;
+  const a = e.target.closest(CARD);
+  if (a === hoverArt) return;
+  hoverArt = a; clearTimeout(hoverT); stopPreview();
+  if (a) hoverT = setTimeout(() => startPreview(a), 500);
+});
+document.documentElement.addEventListener('mouseleave', () => { hoverArt = null; clearTimeout(hoverT); stopPreview(); });
+document.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'mouse') return;
+  const a = e.target.closest(CARD); if (!a) return;
+  clearTimeout(holdT); holdT = setTimeout(() => { held = true; startPreview(a); }, 450);
+});
+const endHold = () => { clearTimeout(holdT); if (held) { stopPreview(); setTimeout(() => held = false, 350); } };
+['pointerup', 'pointercancel'].forEach(t => document.addEventListener(t, endHold));
+
+// ---- Playback ----
+function startStream(c) {
+  cur = c; $('err').classList.add('hidden'); spin(true);
+  if (hls) { hls.destroy(); hls = null; }
+  renderAudio();
+  const src = url(c.url);
+  if (window.Hls && Hls.isSupported()) {
+    hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+    hls.loadSource(src); hls.attachMedia(v);
+    hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, renderAudio);
+    hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, renderAudio);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => {}));
+    hls.on(Hls.Events.ERROR, (_, d) => {
+      if (!d.fatal) return;
+      if (d.type === Hls.ErrorTypes.NETWORK_ERROR) fail('Network/CORS error – this stream may be offline, blocked, or HTTP-only (blocked on HTTPS pages).');
+      else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+      else fail('Playback failed. Try another channel.');
+    });
+  } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+    v.src = src; v.play().catch(() => {});
+  } else fail('HLS is not supported in this browser.');
+}
+function fail(m) { spin(false); $('err').textContent = m; $('err').classList.remove('hidden'); }
+
+function setMode(m) {
+  mode = m;
+  const watch = m === 'watch', mini = m === 'mini';
+  $('watch').classList.toggle('hidden', !watch);
+  $('miniSlot').classList.toggle('hidden', !mini);
+  stage.classList.toggle('mini', mini);
+  document.body.style.overflow = watch ? 'hidden' : '';
+  if (watch) re($('watch'), 'enter'); if (mini) re($('miniSlot'), 'pop'); stage.classList.remove('idle');
+  (watch ? $('watchSlot') : $('miniSlot')).appendChild(stage);
+  v.play().catch(() => {}); // moving the element can pause it
+}
+function openWatch(c) {
+  stopPreview();
+  if (mode === 'none' || cur !== c) startStream(c);
+  const first = mode === 'none' || mode === 'mini' ? false : true;
+  if (mode !== 'watch') history.pushState({ w: 1 }, '');
+  setMode('watch');
+  $('wTitle').textContent = $('mTitle').textContent = c.name;
+  $('wMeta').textContent = [c.cats.join(' · '), c.langs.join(', ')].filter(Boolean).join(' • ');
+  const rel = channels.filter(x => x !== c && x.cats.some(k => c.cats.includes(k))).slice(0, 12);
+  $('related').innerHTML = rel.map(card).join('');
+  $('watch').scrollTop = 0;
+}
+function minimize() { if (mode === 'watch') setMode('mini'); }
+function closePlayer() {
+  v.pause(); if (hls) { hls.destroy(); hls = null; }
+  v.removeAttribute('src'); v.load();
+  $('parking').appendChild(stage); stage.classList.remove('mini');
+  $('watch').classList.add('hidden'); $('miniSlot').classList.add('hidden');
+  document.body.style.overflow = ''; mode = 'none'; cur = null;
+}
+$('back').onclick = () => history.state && history.state.w ? history.back() : minimize();
+window.addEventListener('popstate', minimize);
+$('minib').onclick = $('back').onclick;
+$('mOpen').onclick = () => cur && openWatch(cur);
+$('mClose').onclick = closePlayer;
+const aboutOpen = () => !$('about').classList.contains('hidden');
+function openAbout() { $('about').classList.remove('hidden'); re($('about'), 'fade'); re($('aboutCard'), 'pop'); document.body.style.overflow = 'hidden'; }
+function closeAbout() { $('about').classList.add('hidden'); document.body.style.overflow = mode === 'watch' ? 'hidden' : ''; }
+$('aboutBtn').onclick = $('aboutLink').onclick = openAbout;
+$('aboutClose').onclick = closeAbout;
+$('about').onclick = e => { if (e.target === $('about')) closeAbout(); };
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (aboutOpen()) closeAbout();
+  else if (mode === 'watch' && !document.fullscreenElement) $('back').onclick();
+});
+
+// ---- Controls ----
+const toggle = () => v.paused ? v.play() : v.pause();
+$('play').onclick = $('mPlay').onclick = $('bigPlay').onclick = toggle;
+// YouTube-style overlay: click/tap only reveals controls (no pause); double-click = fullscreen
+let idleT;
+function hide() { if (!v.paused && mode === 'watch' && $('audMenu').classList.contains('hidden')) stage.classList.add('idle'); }
+function wake() {
+  stage.classList.remove('idle'); clearTimeout(idleT);
+  idleT = setTimeout(hide, 2000);
+}
+stage.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') wake(); });
+stage.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') hide(); });
+$('ctl').addEventListener('input', wake); $('ctl').addEventListener('click', wake);
+v.onclick = () => {
+  if (moved) return;
+  if (mode === 'mini') return cur && openWatch(cur);
+  // 1st click/tap shows controls, next click hides them (while playing)
+  stage.classList.contains('idle') || v.paused ? wake() : (clearTimeout(idleT), hide());
+};
+v.ondblclick = () => mode === 'watch' && $('fs').click();
+document.addEventListener('keydown', e => {
+  if (mode !== 'watch' || /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName) && document.activeElement.type !== 'range') return;
+  const k = e.key.toLowerCase();
+  if (k === ' ' || k === 'k') { e.preventDefault(); toggle(); }
+  else if (k === 'f') $('fs').click(); else if (k === 'm') $('mute').click();
+});
+function setPlayIcons() { const n = v.paused ? 'play' : 'pause'; setIcon($('play'), n); setIcon($('mPlay'), n); setIcon($('bigPlay'), n, 30); }
+v.onplay = v.onpause = () => { setPlayIcons(); re($('bigPlay'), 'bump'); wake(); };
+v.onwaiting = v.onloadstart = () => spin(true);
+v.onplaying = v.oncanplay = () => spin(false);
+$('vol').oninput = e => { v.volume = +e.target.value; v.muted = v.volume === 0; };
+$('mute').onclick = () => v.muted = !v.muted;
+v.onvolumechange = () => { setIcon($('mute'), v.muted || v.volume === 0 ? 'mute' : 'volume'); $('vol').value = v.muted ? 0 : v.volume; };
+$('bri').oninput = e => v.style.filter = `brightness(${e.target.value})`;
+$('ratio').onchange = e => {
+  const f = $('frame'), r = e.target.value;
+  f.style.aspectRatio = r.includes('/') ? r : 'auto';
+  f.style.height = r.includes('/') ? '' : '75vh';
+  f.style.width = r.includes('/') ? '' : '100%';
+  v.style.objectFit = r === 'fill' ? 'fill' : 'contain';
+};
+$('fs').onclick = async () => {
+  if (document.fullscreenElement) return document.exitFullscreen();
+  try {
+    const f = stage.requestFullscreen || stage.webkitRequestFullscreen;
+    if (!f) throw 0; await f.call(stage);
+  } catch (e) { v.webkitEnterFullscreen?.(); } // iPhone Safari: native player, rotates with the device
+};
+if (!document.pictureInPictureEnabled) $('pip').style.display = 'none';
+$('pip').onclick = async () => {
+  try { document.pictureInPictureElement ? await document.exitPictureInPicture() : await v.requestPictureInPicture(); }
+  catch (e) { fail('Picture-in-Picture is unavailable for this stream.'); }
+};
+
+// ---- Audio tracks (HLS.js, or native tracks on Safari) ----
+function trackLabel(t, i) {
+  const lang = (t.lang || t.language || '').toUpperCase(), name = t.name || t.label || '';
+  if (name && lang && !name.toUpperCase().includes(lang)) return `${name} (${lang})`;
+  return name || lang || `Track ${i + 1}`;
+}
+function getTracks() {
+  if (hls) return hls.audioTracks.map((t, i) => ({ label: trackLabel(t, i), active: i === hls.audioTrack }));
+  const at = v.audioTracks;
+  return at && at.length ? [...at].map((t, i) => ({ label: trackLabel(t, i), active: t.enabled })) : [];
+}
+function setTrack(i) {
+  if (hls) hls.audioTrack = i;
+  else for (let k = 0; k < v.audioTracks.length; k++) v.audioTracks[k].enabled = k === i;
+  renderAudio();
+}
+function renderAudio() {
+  const tr = getTracks(), menu = $('audMenu');
+  $('audWrap').classList.toggle('hidden', tr.length < 2);
+  if (tr.length < 2) menu.classList.add('hidden');
+  menu.innerHTML = tr.map((t, i) => `<button data-i="${i}" class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-left hover:bg-white/15 ${t.active ? 'text-red-400 font-semibold' : 'text-white'}"><span>${esc(t.label)}</span>${t.active ? ic('check', 16) : ''}</button>`).join('');
+}
+$('aud').onclick = () => { const m = $('audMenu'); m.classList.toggle('hidden'); if (!m.classList.contains('hidden')) re(m, 'menu-in'); };
+$('audMenu').onclick = e => { const b = e.target.closest('button'); if (b) { setTrack(+b.dataset.i); $('audMenu').classList.add('hidden'); } };
+document.addEventListener('click', e => { if (!e.target.closest('#audWrap')) $('audMenu').classList.add('hidden'); });
+if (v.audioTracks && v.audioTracks.addEventListener) ['addtrack', 'removetrack', 'change'].forEach(ev => v.audioTracks.addEventListener(ev, renderAudio));
+
+// ---- Draggable mini-player (snaps to nearest corner) ----
+const ms = $('miniSlot'); let drag = null, moved = false;
+function snapMini() {
+  if (!ms.style.left) return;
+  const r = ms.getBoundingClientRect(), m = 12;
+  ms.style.left = (r.left + r.width / 2 < innerWidth / 2 ? m : innerWidth - r.width - m) + 'px';
+  ms.style.top = (r.top + r.height / 2 < innerHeight / 2 ? m : innerHeight - r.height - m) + 'px';
+}
+ms.addEventListener('pointerdown', e => {
+  if (e.target.closest('button')) return;
+  const r = ms.getBoundingClientRect(); drag = { x: e.clientX, y: e.clientY, l: r.left, t: r.top, id: e.pointerId };
+});
+window.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (!moved && Math.hypot(dx, dy) < 6) return;
+  if (!moved) { moved = true; ms.classList.add('dragging'); try { ms.setPointerCapture(drag.id); } catch (_) {} }
+  ms.style.right = ms.style.bottom = 'auto';
+  ms.style.left = Math.min(Math.max(0, drag.l + dx), innerWidth - ms.offsetWidth) + 'px';
+  ms.style.top = Math.min(Math.max(0, drag.t + dy), innerHeight - ms.offsetHeight) + 'px';
+});
+window.addEventListener('pointerup', () => {
+  if (!drag) return; drag = null;
+  if (moved) { ms.classList.remove('dragging'); snapMini(); setTimeout(() => moved = false, 60); }
+});
+window.addEventListener('resize', snapMini);
+
+// ---- Infinite scroll ----
+const io = new IntersectionObserver(es => {
+  if (es[0].isIntersecting && shown < filtered.length) { more(); io.unobserve($('sentinel')); io.observe($('sentinel')); }
+}, { rootMargin: '600px' });
+io.observe($('sentinel'));
+
+// ---- Button ripple ----
+document.addEventListener('pointerdown', e => {
+  const b = e.target.closest('.btn'); if (!b) return;
+  const r = b.getBoundingClientRect(), d = Math.max(r.width, r.height), sp = document.createElement('span');
+  sp.className = 'ripple';
+  sp.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d / 2}px;top:${e.clientY - r.top - d / 2}px`;
+  b.appendChild(sp); setTimeout(() => sp.remove(), 600);
+});
+
+// ---- Logo ----
+const LOGO = 'data:image/webp;base64,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';
+document.querySelectorAll('[data-logo]').forEach(i => i.src = LOGO);
+document.head.insertAdjacentHTML('beforeend', `<link rel="icon" href="${LOGO}"><link rel="apple-touch-icon" href="${LOGO}">`);
+
+// ---- Icons init ----
+document.querySelectorAll('[data-ic]').forEach(el => el.insertAdjacentHTML('afterbegin', ic(el.dataset.ic)));
+setIcon($('mute'), 'volume'); setIcon($('fs'), 'fs'); setPlayIcons();
+document.addEventListener('fullscreenchange', () => {
+  const on = !!document.fullscreenElement;
+  setIcon($('fs'), on ? 'fsExit' : 'fs');
+  // On phones/tablets, rotate to landscape in fullscreen and release on exit
+  if (matchMedia('(pointer: coarse)').matches && screen.orientation) {
+    if (on) screen.orientation.lock?.('landscape').catch(() => {});
+    else screen.orientation.unlock?.();
+  }
+});
+
+// ---- Theme ----
+function applyTheme(t) {
+  document.documentElement.classList.toggle('light', t === 'light');
+  setIcon($('theme'), t === 'light' ? 'moon' : 'sun');
+  try { localStorage.setItem('theme', t); } catch (e) {}
+}
+let saved = null; try { saved = localStorage.getItem('theme'); } catch (e) {}
+applyTheme(saved || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+$('theme').onclick = () => { re($('theme'), 'spin-once'); applyTheme(document.documentElement.classList.contains('light') ? 'dark' : 'light'); };
+
+load();
+</script>
+</body>
+</html>
