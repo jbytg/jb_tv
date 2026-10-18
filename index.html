@@ -79,7 +79,16 @@
 
 <main class="p-3 sm:p-5">
   <div id="status" class="text-center t-muted py-20"><img data-logo alt="" class="h-16 w-auto mx-auto mb-3 animate-pulse">Loading playlist…</div>
-  <div id="count" class="text-xs t-muted mb-3 hidden"></div>
+  <div id="bar" class="hidden flex flex-wrap items-center gap-2 mb-3">
+    <span id="count" class="text-xs t-muted mr-auto"></span>
+    <button id="hideBtn" class="btn !py-1.5 !px-3 text-xs" title="Hide channels that failed on this site"></button>
+    <button id="scanBtn" class="btn !py-1.5 !px-3 text-xs" title="Check which channels work on this site" data-ic="scan">Scan list</button>
+    <button id="resetBtn" class="btn !py-1.5 !px-3 text-xs hidden" title="Show all hidden channels again">Reset</button>
+  </div>
+  <div id="scanProg" class="hidden mb-3">
+    <div class="flex justify-between text-xs t-muted mb-1"><span id="scanTxt"></span><button id="scanStop" class="underline hover:text-red-500">Stop</button></div>
+    <div class="h-1.5 rounded-full t-card overflow-hidden"><div id="scanBar" class="h-full bg-red-600 transition-all duration-300" style="width:0%"></div></div>
+  </div>
   <div id="grid" class="grid gap-x-4 gap-y-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"></div>
   <div id="sentinel" class="h-1"></div>
   <div class="text-center mt-8"><button id="more" class="btn hidden">Load more</button></div>
@@ -182,6 +191,7 @@ const P = {
   close:'<path d="M18 6 6 18M6 6l12 12"/>',
   back:'<path d="M19 12H5M12 19l-7-7 7-7"/>',
   audio:'<path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/>',
+  scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/>',
   info:'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
   check:'<path d="M20 6 9 17l-5-5"/>'
 };
@@ -254,6 +264,64 @@ async function loadLangs(req) {
 }
 $('lang').onclick = () => { if (langState === 'failed') loadLangs(fetchLangText()); };
 
+// ---- Hide channels that don't work on this site ----
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)) || []; } catch (e) { return []; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+const bad = new Set(store.get('jbBad')), good = new Set(store.get('jbGood'));
+let hideBad = true, scan = null;
+try { hideBad = localStorage.getItem('jbHide') !== '0'; } catch (e) {}
+const saveSets = () => { store.set('jbBad', [...bad]); store.set('jbGood', [...good]); };
+function refreshBar() {
+  $('bar').classList.remove('hidden');
+  const n = channels.reduce((a, c) => a + (bad.has(c.url) ? 1 : 0), 0);
+  $('count').textContent = `${filtered.length.toLocaleString()} channels` + (hideBad && n ? ` · ${n.toLocaleString()} hidden` : '');
+  $('hideBtn').textContent = `Hide broken: ${hideBad ? 'On' : 'Off'}`;
+  $('hideBtn').classList.toggle('!bg-red-600', hideBad); $('hideBtn').classList.toggle('!text-white', hideBad);
+  $('resetBtn').classList.toggle('hidden', !bad.size && !good.size);
+}
+// A channel "works here" if its playlist loads from this page (same check the player needs)
+async function probe(u) {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
+  try {
+    const x = await fetch(u, { signal: ctl.signal, cache: 'no-store' });
+    if (!x.ok) return false;
+    const rd = x.body.getReader(), { value } = await rd.read(); rd.cancel();
+    return new TextDecoder().decode(value || new Uint8Array()).trimStart().startsWith('#EXTM3U');
+  } catch (e) { return false; } finally { clearTimeout(t); }
+}
+const checkChannel = async c => (await probe(url(c.url))) || (PROXY ? probe(viaProxy(c.url)) : false);
+async function scanList() {
+  if (scan) return;
+  const todo = filtered.filter(c => !good.has(c.url));
+  if (!todo.length) return alert('Nothing new to check in this list.');
+  if (todo.length > 300 && !confirm(`Check ${todo.length.toLocaleString()} channels? This can take a few minutes.\nTip: pick a country, category or language first for a faster scan.`)) return;
+  scan = { stop: false, done: 0, bad: 0, total: todo.length };
+  $('scanProg').classList.remove('hidden'); $('scanBtn').disabled = true;
+  let i = 0;
+  const run = async () => {
+    while (!scan.stop && i < todo.length) {
+      const c = todo[i++], ok = await checkChannel(c);
+      if (ok) { good.add(c.url); bad.delete(c.url); } else { bad.add(c.url); scan.bad++; }
+      scan.done++;
+      $('scanTxt').textContent = `Checking ${scan.done.toLocaleString()} / ${scan.total.toLocaleString()} · ${scan.bad.toLocaleString()} broken`;
+      $('scanBar').style.width = (scan.done / scan.total * 100) + '%';
+      if (scan.done % 40 === 0) saveSets();
+    }
+  };
+  await Promise.all(Array.from({ length: 8 }, run));
+  saveSets();
+  $('scanTxt').textContent = `${scan.stop ? 'Stopped' : 'Done'}: ${scan.bad.toLocaleString()} broken channel${scan.bad === 1 ? '' : 's'} hidden`;
+  scan = null; $('scanBtn').disabled = false;
+  setTimeout(() => { if (!scan) $('scanProg').classList.add('hidden'); }, 3000);
+  applyFilter();
+}
+$('scanBtn').onclick = scanList;
+$('scanStop').onclick = () => { if (scan) scan.stop = true; };
+$('hideBtn').onclick = () => { hideBad = !hideBad; try { localStorage.setItem('jbHide', hideBad ? '1' : '0'); } catch (e) {} applyFilter(); };
+$('resetBtn').onclick = () => { if (confirm('Show all hidden channels and forget scan results?')) { bad.clear(); good.clear(); saveSets(); applyFilter(); } };
+
 // ---- Grid ----
 function card(c, i = 0) {
   const ini = esc(c.name.trim().slice(0, 2).toUpperCase());
@@ -268,9 +336,9 @@ function card(c, i = 0) {
 }
 function applyFilter() {
   const q = $('q').value.trim().toLowerCase(), cat = $('cat').value, lang = $('lang').value;
-  filtered = channels.filter(c => (!cat || c.cats.includes(cat)) && (!lang || c.langs.includes(lang)) && (!q || c.name.toLowerCase().includes(q)));
+  filtered = channels.filter(c => (!hideBad || !bad.has(c.url)) && (!cat || c.cats.includes(cat)) && (!lang || c.langs.includes(lang)) && (!q || c.name.toLowerCase().includes(q)));
   stopPreview(); $('grid').innerHTML = ''; shown = 0;
-  $('count').classList.remove('hidden'); $('count').textContent = `${filtered.length.toLocaleString()} channels`;
+  refreshBar();
   more();
 }
 function more() {
@@ -357,10 +425,13 @@ function startStream(c, n = 0) {
 }
 function fail(m) {
   spin(false);
-  $('err').innerHTML = `<div class="max-w-sm"><p>${m}</p><button id="retry" class="btn mt-3 !text-white mx-auto">Retry</button></div>`;
+  $('err').innerHTML = `<div class="max-w-sm"><p>${m}</p><div class="flex gap-2 justify-center mt-3"><button id="retry" class="btn !text-white">Retry</button><button id="hideCh" class="btn !text-white">Hide channel</button></div></div>`;
   $('err').classList.remove('hidden');
 }
-$('err').onclick = e => { if (e.target.closest('#retry') && cur) startStream(cur); };
+$('err').onclick = e => {
+  if (e.target.closest('#retry') && cur) startStream(cur);
+  if (e.target.closest('#hideCh') && cur) { bad.add(cur.url); saveSets(); closePlayer(); if (history.state && history.state.w) history.back(); applyFilter(); }
+};
 
 function setMode(m) {
   mode = m;
@@ -381,7 +452,7 @@ function openWatch(c) {
   setMode('watch');
   $('wTitle').textContent = $('mTitle').textContent = c.name;
   $('wMeta').textContent = [c.cats.join(' · '), c.langs.join(', ')].filter(Boolean).join(' • ');
-  const rel = channels.filter(x => x !== c && x.cats.some(k => c.cats.includes(k))).slice(0, 12);
+  const rel = channels.filter(x => x !== c && !(hideBad && bad.has(x.url)) && x.cats.some(k => c.cats.includes(k))).slice(0, 12);
   $('related').innerHTML = rel.map(card).join('');
   $('watch').scrollTop = 0;
 }
@@ -439,7 +510,7 @@ document.addEventListener('keydown', e => {
 function setPlayIcons() { const n = v.paused ? 'play' : 'pause'; setIcon($('play'), n); setIcon($('mPlay'), n); setIcon($('bigPlay'), n, 30); }
 v.onplay = v.onpause = () => { setPlayIcons(); re($('bigPlay'), 'bump'); wake(); };
 v.onwaiting = v.onloadstart = () => spin(true);
-v.onplaying = v.oncanplay = () => spin(false);
+v.onplaying = v.oncanplay = () => { spin(false); if (cur && bad.delete(cur.url)) saveSets(); };
 $('vol').oninput = e => { v.volume = +e.target.value; v.muted = v.volume === 0; };
 $('mute').onclick = () => v.muted = !v.muted;
 v.onvolumechange = () => { setIcon($('mute'), v.muted || v.volume === 0 ? 'mute' : 'volume'); $('vol').value = v.muted ? 0 : v.volume; };
