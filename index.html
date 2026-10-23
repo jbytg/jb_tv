@@ -10,6 +10,12 @@
 <link rel="canonical" href="https://jbhub.ryzn.pro/jb_yt/">
 <link rel="icon" type="image/png" href="favicon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="JB TV">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<!-- Google Search Console: paste your verification tag here, e.g. <meta name="google-site-verification" content="YOUR_CODE"> -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="JB TV">
 <meta property="og:title" content="JB TV – Watch Live TV Channels Online Free">
@@ -103,6 +109,7 @@
   <input id="q" type="search" placeholder="Search channels…" class="flex-1 min-w-[150px] max-w-xl t-input t-bord border rounded-full px-4 py-2 text-sm outline-none focus:border-blue-500">
   <select id="cat" class="t-chip rounded-full px-3 py-2 text-sm outline-none max-w-[45%]"><option value="">All categories</option></select>
   <select id="lang" class="t-chip rounded-full px-3 py-2 text-sm outline-none max-w-[45%]" title="Language"><option value="">Loading languages…</option></select>
+  <button id="installBtn" class="btn hidden" title="Install JB TV as an app" data-ic="download"><span class="hidden sm:inline">Install</span></button>
   <button id="aboutBtn" class="btn" title="About us" data-ic="info"><span class="hidden sm:inline">About</span></button>
   <button id="theme" class="btn" title="Switch light/dark theme"></button>
 </header>
@@ -117,6 +124,7 @@
   <div id="bar" class="hidden flex flex-wrap items-center gap-2 mb-3">
     <span id="count" class="text-xs t-muted mr-auto"></span>
     <button id="hideBtn" class="btn !py-1.5 !px-3 text-xs" title="Hide channels that failed on this site"></button>
+    <button id="proxyBtn" class="btn !py-1.5 !px-3 text-xs" title="Use a proxy for blocked or HTTP-only streams. Turn it off if it causes problems."></button>
     <button id="rndBtn" class="btn !py-1.5 !px-3 text-xs" title="Play a random channel from this list" data-ic="shuffle">Surprise me</button>
     <button id="scanBtn" class="btn !py-1.5 !px-3 text-xs" title="Check which channels work on this site" data-ic="scan">Scan list</button>
     <button id="resetBtn" class="btn !py-1.5 !px-3 text-xs hidden" title="Show all hidden channels again">Reset</button>
@@ -140,7 +148,7 @@
   <div class="max-w-6xl mx-auto p-2 sm:p-4">
     <button id="back" class="btn mb-3" data-ic="back">Back</button>
     <div id="watchSlot" class="bg-black rounded-xl overflow-hidden"></div>
-    <h1 id="wTitle" class="text-lg sm:text-xl font-semibold mt-3"></h1>
+    <div class="flex items-start justify-between gap-3 mt-3"><h2 id="wTitle" class="text-lg sm:text-xl font-semibold"></h2><button id="shareBtn" class="btn shrink-0" title="Share this channel" data-ic="share">Share</button></div>
     <p id="wMeta" class="text-sm t-muted"></p>
     <h2 class="font-semibold mt-6 mb-3">More in this category</h2>
     <div id="related" class="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"></div>
@@ -164,6 +172,7 @@
       <li class="flex gap-2" style="--i:4"><span data-ic="check" class="text-red-500 shrink-0 mt-0.5"></span>Draggable mini-player, Picture-in-Picture and fullscreen</li>
       <li class="flex gap-2" style="--i:5"><span data-ic="check" class="text-red-500 shrink-0 mt-0.5"></span>Multiple audio tracks, brightness and aspect-ratio controls</li>
       <li class="flex gap-2" style="--i:6"><span data-ic="check" class="text-red-500 shrink-0 mt-0.5"></span>Light and dark themes, responsive on every screen</li>
+      <li class="flex gap-2" style="--i:7"><span data-ic="check" class="text-red-500 shrink-0 mt-0.5"></span>Installable as an app (Install button, or Share → Add to Home Screen on iPhone)</li>
     </ul>
     <p class="stag mt-5 text-xs t-muted"><span style="--i:7">Shortcuts: <b>Space/K</b> play·pause, <b>F</b> fullscreen, <b>M</b> mute, <b>A</b> aspect, <b>/</b> search, <b>Esc</b> back.</span></p>
     <p class="stag mt-4 text-xs t-muted rounded-xl t-card p-3"><span style="--i:8">JB TV does not host, store or upload any video. Channels come from the public iptv-org playlists and belong to their respective owners; some may be offline or region-locked. Player powered by HLS.js.</span></p>
@@ -229,6 +238,8 @@ const P = {
   back:'<path d="M19 12H5M12 19l-7-7 7-7"/>',
   audio:'<path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/>',
   scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/>',
+  download:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
+  share:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>',
   shuffle:'<path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>',
   up:'<path d="m18 15-6-6-6 6"/>',
   aspect:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h3M7 9v3M17 15h-3M17 15v-3"/>',
@@ -270,8 +281,12 @@ async function load() {
     const cats = [...new Set(channels.flatMap(c => c.cats))].sort();
     $('cat').insertAdjacentHTML('beforeend', cats.map(c => `<option>${esc(c)}</option>`).join(''));
     buildChips();
+    const P = new URLSearchParams(location.search), deep = P.get('c'); wantLang = P.get('lang') || '';
+    if (P.get('q')) $('q').value = P.get('q');
+    if (cats.includes(P.get('cat'))) $('cat').value = P.get('cat');
     $('status').classList.add('hidden');
     applyFilter(); loadLangs(langReq);
+    if (deep) { const ch = channels.find(c => chId(c) === deep); if (ch) openWatch(ch); }
   } catch (e) {
     $('grid').innerHTML = '';
     $('status').innerHTML = `Could not load playlist (${esc(e.message)}).<br>Check your connection or set <code>PROXY</code> in the script.`;
@@ -283,7 +298,7 @@ async function fetchLangText() { // direct first, then proxy (if configured)
   for (const t of tries) { try { const x = await fetch(t); if (x.ok) return await x.text(); } catch (e) {} }
   return null;
 }
-let langState = 'loading', langRetried = false;
+let langState = 'loading', langRetried = false, wantLang = '';
 async function loadLangs(req) {
   const sel = $('lang'); langState = 'loading'; sel.options[0].textContent = 'Loading languages…';
   const txt = await req;
@@ -302,6 +317,7 @@ async function loadLangs(req) {
   langState = 'ready'; sel.options[0].textContent = 'All languages';
   sel.insertAdjacentHTML('beforeend', langs.map(l => `<option>${esc(l)}</option>`).join(''));
   re(sel, 'pop');
+  if (wantLang && langs.includes(wantLang)) { sel.value = wantLang; wantLang = ''; applyFilter(); }
 }
 $('lang').onclick = () => { if (langState === 'failed') loadLangs(fetchLangText()); };
 
@@ -315,7 +331,7 @@ let hideBad = true, scan = null;
 try { hideBad = localStorage.getItem('jbHide') !== '0'; } catch (e) {}
 const saveSets = () => { store.set('jbBad', [...bad]); store.set('jbGood', [...good]); };
 function refreshBar() {
-  syncChips();
+  syncChips(); syncProxyUi();
   $('bar').classList.remove('hidden');
   const n = channels.reduce((a, c) => a + (bad.has(c.url) ? 1 : 0), 0);
   $('count').textContent = `${filtered.length.toLocaleString()} channels` + (hideBad && n ? ` · ${n.toLocaleString()} hidden` : '');
@@ -333,7 +349,7 @@ async function probe(u) {
     return new TextDecoder().decode(value || new Uint8Array()).trimStart().startsWith('#EXTM3U');
   } catch (e) { return false; } finally { clearTimeout(t); }
 }
-const checkChannel = async c => (await probe(url(c.url))) || (PROXY ? probe(viaProxy(c.url)) : false);
+const checkChannel = async c => (await probe(url(c.url))) || (proxyMode === 'worker' && PROXY ? probe(viaProxy(c.url)) : false);
 async function scanList() {
   if (scan) return;
   const todo = filtered.filter(c => !good.has(c.url));
@@ -363,6 +379,31 @@ $('scanBtn').onclick = scanList;
 $('scanStop').onclick = () => { if (scan) scan.stop = true; };
 $('hideBtn').onclick = () => { hideBad = !hideBad; try { localStorage.setItem('jbHide', hideBad ? '1' : '0'); } catch (e) {} applyFilter(); };
 $('resetBtn').onclick = () => { if (confirm('Show all hidden channels and forget scan results?')) { bad.clear(); good.clear(); saveSets(); applyFilter(); } };
+
+// ---- Proxy (public or your own) with an on/off switch ----
+const PUBLIC_PROXIES = [ // free third-party proxies: can be slow, rate-limited or offline
+  { name: 'AllOrigins', wrap: u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u) },
+  { name: 'CodeTabs', wrap: u => 'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(u) }
+];
+const PLABEL = { off: 'Off', public: 'Public', worker: 'Your proxy' };
+let proxyMode = PROXY ? 'worker' : 'public';
+try { const m = localStorage.getItem('jbProxy'); if (m === 'off' || m === 'public' || (m === 'worker' && PROXY)) proxyMode = m; } catch (e) {}
+const proxyList = () => proxyMode === 'off' ? [] : proxyMode === 'public' ? PUBLIC_PROXIES
+  : [{ name: 'Your proxy', wrap: u => u.startsWith(PROXY) ? u : PROXY + encodeURIComponent(u) }];
+function syncProxyUi() {
+  const b = $('proxyBtn'); b.textContent = 'Proxy: ' + PLABEL[proxyMode];
+  b.classList.toggle('!bg-red-600', proxyMode !== 'off'); b.classList.toggle('!text-white', proxyMode !== 'off');
+}
+function setProxy(m) { proxyMode = m; try { localStorage.setItem('jbProxy', m); } catch (e) {} syncProxyUi(); }
+function cycleProxy() {
+  const modes = ['off', 'public', ...(PROXY ? ['worker'] : [])];
+  setProxy(modes[(modes.indexOf(proxyMode) + 1) % modes.length]); toast('Proxy: ' + PLABEL[proxyMode]);
+}
+async function proxyHealthy(p) { // fetch a tiny known page through the proxy
+  try { const x = await fetch(p.wrap('https://example.com/'), { cache: 'no-store' }); return x.ok && (await x.text()).includes('Example Domain'); }
+  catch (e) { return false; }
+}
+$('proxyBtn').onclick = cycleProxy;
 
 // ---- Toast ----
 let toastT;
@@ -434,11 +475,17 @@ function card(c, i = 0) {
     <h3 class="mt-2 text-sm font-medium line2">${esc(c.name)}</h3>
     <p class="text-xs t-muted truncate">${esc(c.cats.join(' · '))}</p></article>`;
 }
+function syncUrl() { // keep ?q= ?cat= ?lang= in the address bar so a filtered view can be shared
+  if (mode === 'watch') return;
+  const p = new URLSearchParams(), q = $('q').value.trim(), cat = $('cat').value, lang = $('lang').value;
+  if (q) p.set('q', q); if (cat) p.set('cat', cat); if (lang) p.set('lang', lang);
+  const qs = p.toString(); history.replaceState(history.state, '', location.pathname + (qs ? '?' + qs : ''));
+}
 function applyFilter() {
   const q = $('q').value.trim().toLowerCase(), cat = $('cat').value, lang = $('lang').value;
   filtered = channels.filter(c => (!hideBad || !bad.has(c.url)) && (!cat || c.cats.includes(cat)) && (!lang || c.langs.includes(lang)) && (!q || c.name.toLowerCase().includes(q)));
   stopPreview(); $('grid').innerHTML = ''; shown = 0;
-  refreshBar();
+  syncUrl(); refreshBar();
   more();
 }
 function more() {
@@ -492,7 +539,7 @@ const endHold = () => { clearTimeout(holdT); if (held) { stopPreview(); setTimeo
 
 // ---- Playback ----
 function netMsg(c, d, viaProx) {
-  const code = d.response && d.response.code, hint = PROXY ? '' : ' Set up the CORS proxy (cors-proxy-worker.js) to unlock more channels.';
+  const code = d.response && d.response.code, hint = proxyList().length ? '' : ' Try turning the Proxy button on.';
   if (viaProx && code >= 400) return `The proxy reached this channel, but its server answered ${code}. It is probably region-locked, blocking proxies, or offline. You can hide it.`;
   if (code === 404 || code === 410) return 'This channel is offline (stream not found).';
   if (code === 401 || code === 403) return `The stream server refused access (${code}).`;
@@ -500,37 +547,55 @@ function netMsg(c, d, viaProx) {
   if (/^http:/.test(c.url) && location.protocol === 'https:') return 'This stream is HTTP-only (or offline), so it cannot play on an HTTPS site.' + hint;
   return 'This stream blocks browser playback (CORS) or is offline.' + hint;
 }
-// Tries the direct stream first, then the CORS proxy (if configured)
+// Tries the direct stream first, then each enabled proxy. With a proxy, the ORIGINAL playlist URL is
+// loaded and every request (playlist + video pieces) is routed through the proxy, so HTTP-only
+// and relative links work too.
+let curVia = 0, proxyFails = 0, startT = 0, vidT = 0;
 function startStream(c, n = 0) {
-  cur = c; $('err').classList.add('hidden'); spin(true);
+  cur = c; curVia = n; $('err').classList.add('hidden'); spin(true);
   if (hls) { hls.destroy(); hls = null; }
   renderAudio();
-  const list = [url(c.url)]; if (PROXY) list.push(viaProxy(c.url));
-  const src = list[n], next = () => n + 1 < list.length && (startStream(c, n + 1), true);
+  const px = proxyList(), via = n > 0 ? px[n - 1] : null, total = px.length + 1;
+  const src = via ? c.url : url(c.url), next = () => n + 1 < total && (startStream(c, n + 1), true);
+  let recov = 0; clearTimeout(startT);
+  startT = setTimeout(() => { // never started playing: move on instead of leaving a black screen
+    if (cur === c && curVia === n && !(v.currentTime > 0) && !next()) giveUp(c, {}, n, 'This channel is taking too long to start. It may be offline or slow. Try Retry or another channel.');
+  }, 15000);
   if (window.Hls && Hls.isSupported()) {
-    hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+    const cfg = { enableWorker: true, lowLatencyMode: true };
+    if (via) cfg.xhrSetup = (xhr, u) => xhr.open('GET', via.wrap(u), true);
+    hls = new Hls(cfg);
     hls.loadSource(src); hls.attachMedia(v);
     hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, renderAudio);
     hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, renderAudio);
     hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => {}));
     hls.on(Hls.Events.ERROR, (_, d) => {
       if (!d.fatal) return;
-      if (d.type === Hls.ErrorTypes.NETWORK_ERROR) { if (!next()) fail(netMsg(c, d, n > 0)); }
-      else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+      if (d.type === Hls.ErrorTypes.NETWORK_ERROR) { if (!next()) giveUp(c, d, n); }
+      else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) { if (++recov <= 2) hls.recoverMediaError(); else if (!next()) fail("This channel's video format can't be played by this browser. Try another browser, or hide the channel."); }
       else if (!next()) fail('Playback failed. Try another channel.');
     });
   } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-    v.src = src; v.play().catch(() => {});
-    v.onerror = () => { if (!next()) fail(netMsg(c, {}, n > 0)); };
+    v.src = via ? via.wrap(c.url) : src; v.play().catch(() => {});
+    v.onerror = () => { if (!next()) giveUp(c, {}, n); };
   } else fail('HLS is not supported in this browser.');
+}
+async function giveUp(c, d, n, msg) {
+  fail(msg || netMsg(c, d, n > 0));
+  if (n > 0 && ++proxyFails >= 3) { // several proxied failures in a row: is the proxy itself down?
+    proxyFails = 0;
+    const p = proxyList()[0], prev = proxyMode;
+    if (p && !(await proxyHealthy(p))) { setProxy('off'); toast('Proxy seems to be down – turned off', () => setProxy(prev)); }
+  }
 }
 function fail(m) {
   spin(false);
-  $('err').innerHTML = `<div class="max-w-sm"><p>${m}</p><div class="flex gap-2 justify-center mt-3"><button id="retry" class="btn !text-white">Retry</button><button id="hideCh" class="btn !text-white">Hide channel</button></div></div>`;
+  $('err').innerHTML = `<div class="max-w-sm"><p>${m}</p><div class="flex flex-wrap gap-2 justify-center mt-3"><button id="retry" class="btn !text-white">Retry</button><button id="proxyErr" class="btn !text-white">Proxy: ${PLABEL[proxyMode]}</button><button id="hideCh" class="btn !text-white">Hide channel</button></div></div>`;
   $('err').classList.remove('hidden');
 }
 $('err').onclick = e => {
   if (e.target.closest('#retry') && cur) startStream(cur);
+  if (e.target.closest('#proxyErr') && cur) { cycleProxy(); startStream(cur); }
   if (e.target.closest('#hideCh') && cur) { bad.add(cur.url); saveSets(); closePlayer(); if (history.state && history.state.w) history.back(); applyFilter(); }
 };
 
@@ -546,15 +611,16 @@ function setMode(m) {
   (watch ? $('watchSlot') : $('miniSlot')).appendChild(stage);
   v.play().catch(() => {}); // moving the element can pause it
 }
+const chId = c => c.tvg || 'h' + [...c.url].reduce((h, ch) => (h * 33 + ch.charCodeAt(0)) >>> 0, 5381).toString(36);
 function openWatch(c) {
   stopPreview();
   if (mode === 'none' || cur !== c) startStream(c);
-  const first = mode === 'none' || mode === 'mini' ? false : true;
-  if (mode !== 'watch') history.pushState({ w: 1 }, '');
+  const link = '?c=' + encodeURIComponent(chId(c));
+  try { if (mode !== 'watch') history.pushState({ w: 1 }, '', link); else history.replaceState(history.state, '', link); } catch (e) {}
   setMode('watch');
   $('wTitle').textContent = $('mTitle').textContent = c.name;
-  $('wMeta').textContent = [c.cats.join(' · '), c.langs.join(', ')].filter(Boolean).join(' • ');
-  const rel = channels.filter(x => x !== c && !(hideBad && bad.has(x.url)) && x.cats.some(k => c.cats.includes(k))).slice(0, 12);
+  $('wMeta').textContent = [(c.cats || []).join(' · '), (c.langs || []).join(', ')].filter(Boolean).join(' • ');
+  const rel = channels.filter(x => x !== c && !(hideBad && bad.has(x.url)) && x.cats.some(k => (c.cats || []).includes(k))).slice(0, 12);
   $('related').innerHTML = rel.map(card).join('');
   $('watch').scrollTop = 0;
 }
@@ -565,6 +631,7 @@ function closePlayer() {
   $('parking').appendChild(stage); stage.classList.remove('mini');
   $('watch').classList.add('hidden'); $('miniSlot').classList.add('hidden');
   document.body.style.overflow = ''; mode = 'none'; cur = null; document.title = BASE_TITLE;
+  history.replaceState(history.state, '', location.pathname);
 }
 $('back').onclick = () => history.state && history.state.w ? history.back() : minimize();
 window.addEventListener('popstate', minimize);
@@ -612,7 +679,14 @@ document.addEventListener('keydown', e => {
 function setPlayIcons() { const n = v.paused ? 'play' : 'pause'; setIcon($('play'), n); setIcon($('mPlay'), n); setIcon($('bigPlay'), n, 30); }
 v.onplay = v.onpause = () => { setPlayIcons(); re($('bigPlay'), 'bump'); wake(); };
 v.onwaiting = v.onloadstart = () => spin(true);
-v.onplaying = v.oncanplay = () => { spin(false); if (cur && bad.delete(cur.url)) saveSets(); if (cur && (!recent[0] || recent[0].url !== cur.url)) addRecent(cur); };
+v.addEventListener('playing', () => { // sound but no picture? tell the user why
+  clearTimeout(startT); clearTimeout(vidT);
+  vidT = setTimeout(() => {
+    if (cur && !v.paused && v.currentTime > 0 && v.readyState >= 2 && v.videoWidth === 0)
+      fail("Audio is playing but this channel's video can't be shown. Its video format (often HEVC/H.265) may not be supported by this browser.");
+  }, 4000);
+});
+v.onplaying = v.oncanplay = () => { spin(false); if (curVia > 0) proxyFails = 0; if (cur && bad.delete(cur.url)) saveSets(); if (cur && (!recent[0] || recent[0].url !== cur.url)) addRecent(cur); };
 $('vol').oninput = e => { v.volume = +e.target.value; v.muted = v.volume === 0; };
 $('mute').onclick = () => v.muted = !v.muted;
 v.onvolumechange = () => { setIcon($('mute'), v.muted || v.volume === 0 ? 'mute' : 'volume'); $('vol').value = v.muted ? 0 : v.volume; };
@@ -730,6 +804,23 @@ function applyTheme(t) {
 let saved = null; try { saved = localStorage.getItem('theme'); } catch (e) {}
 applyTheme(saved || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
 $('theme').onclick = () => { re($('theme'), 'spin-once'); applyTheme(document.documentElement.classList.contains('light') ? 'dark' : 'light'); };
+
+// ---- Share ----
+$('shareBtn').onclick = async () => {
+  if (!cur) return;
+  const u = location.origin + location.pathname + '?c=' + encodeURIComponent(chId(cur));
+  try { if (navigator.share) { await navigator.share({ title: cur.name + ' – JB TV', text: 'Watch ' + cur.name + ' live on JB TV', url: u }); return; } }
+  catch (e) { if (e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(u); toast('Link copied'); } catch (e) { prompt('Copy this link', u); }
+};
+
+// ---- Install as an app (PWA) ----
+let installEv = null;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEv = e; $('installBtn').classList.remove('hidden'); re($('installBtn'), 'pop'); });
+$('installBtn').onclick = async () => { if (!installEv) return; installEv.prompt(); await installEv.userChoice; installEv = null; $('installBtn').classList.add('hidden'); };
+addEventListener('appinstalled', () => { $('installBtn').classList.add('hidden'); toast('JB TV installed'); });
+addEventListener('offline', () => toast("You're offline – channels need internet"));
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 
 renderRecent();
 load();
