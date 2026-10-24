@@ -2,7 +2,7 @@
 // Deploy: dash.cloudflare.com → Workers & Pages → Create → "Hello World" → paste this → Deploy.
 // Then in index.html set:  const PROXY = 'https://YOUR-WORKER.workers.dev/?url=';
 // Only your own site can use it: put your domain in ALLOWED (leave [] to allow everyone).
-const ALLOWED = []; // e.g. ['https://jbhub.ryzn.pro']
+const ALLOWED = ['https://tv.jbhub.ryzn.pro', 'https://jbhub.ryzn.pro']; // only your site can use this proxy
 
 export default {
   async fetch(req) {
@@ -20,7 +20,9 @@ export default {
 
     const headers = { 'User-Agent': 'Mozilla/5.0' };
     if (req.headers.get('Range')) headers.Range = req.headers.get('Range');
-    const up = await fetch(target, { headers, redirect: 'follow' });
+    let up;
+    try { up = await fetch(target, { headers, redirect: 'follow' }); }
+    catch (e) { return new Response('Proxy could not reach the stream: ' + e.message, { status: 502, headers: cors }); }
 
     const h = new Headers(up.headers);
     Object.entries(cors).forEach(([k, v]) => h.set(k, v));

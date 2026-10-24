@@ -7,15 +7,12 @@
 <meta name="description" content="Watch thousands of live TV channels from around the world free on JB TV. Search by name, filter by category or language, and stream in a fast player on mobile, tablet or desktop.">
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta name="theme-color" content="#0f0f0f">
-<link rel="canonical" href="https://jbhub.ryzn.pro/jb_yt/">
-<link rel="icon" type="image/png" href="favicon-192.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="canonical" href="https://tv.jbhub.ryzn.pro/">
 <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png?v=1" sizes="96x96" />
 <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg?v=1" />
 <link rel="shortcut icon" href="/favicon/favicon.ico?v=1" />
 <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png?v=1" />
-<!-- <link rel="manifest" href="/favicon/site.webmanifest?v=1" /> (not used: the page already links its own manifest.webmanifest, and a page can only use one) -->
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" href="/favicon/site.webmanifest?v=1" />
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="JB TV">
@@ -25,14 +22,14 @@
 <meta property="og:site_name" content="JB TV">
 <meta property="og:title" content="JB TV – Watch Live TV Channels Online Free">
 <meta property="og:description" content="Thousands of live TV channels from around the world. Search, filter by category or language and watch on any device.">
-<meta property="og:url" content="https://jbhub.ryzn.pro/jb_yt/">
-<meta property="og:image" content="https://jbhub.ryzn.pro/jb_yt/og-image.png">
+<meta property="og:url" content="https://tv.jbhub.ryzn.pro/">
+<meta property="og:image" content="https://tv.jbhub.ryzn.pro/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="JB TV – Watch Live TV Channels Online Free">
 <meta name="twitter:description" content="Thousands of live TV channels from around the world. Search, filter and watch on any device.">
-<meta name="twitter:image" content="https://jbhub.ryzn.pro/jb_yt/og-image.png">
+<meta name="twitter:image" content="https://tv.jbhub.ryzn.pro/og-image.png">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"JB TV","url":"https://jbhub.ryzn.pro/jb_yt/","description":"Free web player for thousands of live TV channels from around the world.","applicationCategory":"EntertainmentApplication","operatingSystem":"Any","image":"https://jbhub.ryzn.pro/jb_yt/og-image.png","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
+{"@context":"https://schema.org","@type":"WebApplication","name":"JB TV","url":"https://tv.jbhub.ryzn.pro/","description":"Free web player for thousands of live TV channels from around the world.","applicationCategory":"EntertainmentApplication","operatingSystem":"Any","image":"https://tv.jbhub.ryzn.pro/og-image.png","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
 </script>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js"></script>
@@ -61,14 +58,13 @@
   article:hover .thumb{transform:translateY(-4px) scale(1.02);box-shadow:0 12px 28px #0006}
   #grid article,#related article{animation:rise .5s cubic-bezier(.2,.8,.2,1) both}
   .enter{animation:enter .4s cubic-bezier(.2,.8,.2,1)}.pop{animation:pop .4s cubic-bezier(.34,1.56,.64,1)}
-  .bump{animation:bump .35s}.spin-once{animation:spinOnce .5s}.brand{animation:glow 2.5s infinite}
+  .bump{animation:bump .35s}.spin-once{animation:spinOnce .5s}
   .dot{width:6px;height:6px;border-radius:50%;background:#fff;animation:blink 1.2s infinite}
   @keyframes rise{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}
   @keyframes enter{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:none}}
   @keyframes pop{from{opacity:0;transform:scale(.6) translateY(20px)}to{opacity:1;transform:none}}
   @keyframes bump{40%{transform:translate(-50%,-50%) scale(1.25)}}
   @keyframes spinOnce{to{transform:rotate(360deg)}}
-  @keyframes glow{50%{box-shadow:0 0 14px #ef4444aa}}
   @keyframes blink{50%{opacity:.25}}
     .menu-in{animation:menuIn .18s ease-out;transform-origin:bottom right}
   @keyframes menuIn{from{opacity:0;transform:translateY(6px) scale(.96)}}
@@ -91,7 +87,7 @@
   #miniSlot.dragging{transition:none;cursor:grabbing;box-shadow:0 20px 40px #0008}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
   #stage .btn{background:#ffffff2e;color:#fff}#stage .btn:hover{background:#ffffff4d}
-  #ratio option{color:#000}
+
   #frame{aspect-ratio:16/9;max-height:75vh;margin:0 auto}
   .mini #frame{aspect-ratio:16/9!important;max-height:none!important;width:100%!important}
   .mini #ctl,.mini #bigPlay{display:none}
