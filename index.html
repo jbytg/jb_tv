@@ -12,7 +12,7 @@
 <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg?v=1" />
 <link rel="shortcut icon" href="/favicon/favicon.ico?v=1" />
 <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png?v=1" />
-<link rel="manifest" href="/favicon/site.webmanifest?v=1" />
+<link rel="manifest" href="/favicon/site.webmanifest?v=2" />
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="JB TV">
@@ -54,6 +54,24 @@
   @media (hover:none){.del{opacity:1}}
   .toast-in{animation:toastIn .3s cubic-bezier(.2,.8,.2,1)}@keyframes toastIn{from{opacity:0;transform:translate(-50%,20px)}}
   .sec{display:flex;align-items:center;gap:.5rem;font-weight:600}.sec:before{content:"";width:4px;height:1.1rem;border-radius:4px;background:#ef4444}
+  .btn.hidden{display:none}
+  @media (max-width:767px){ /* movies on phones: controls sit below the video. Live TV keeps the overlay controls. */
+    #stage.movie:not(:fullscreen):not(.mini) #ctl{position:static;background:#0c0c0c;opacity:1!important;transform:none!important;pointer-events:auto!important}
+    #stage.movie:not(:fullscreen) #ctl .btn{padding:.4rem .55rem}
+    #stage.movie:not(:fullscreen) #vol,#stage.movie:not(:fullscreen) .lbl{display:none}
+  }
+  #frame{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+  #seek{touch-action:none}
+  #seek:hover .st,#seek.drag .st{height:6px}
+  #seekKnob{transform:translate(-50%,-50%) scale(0);transition:transform .15s}
+  #seek:hover #seekKnob,#seek.drag #seekKnob{transform:translate(-50%,-50%) scale(1)}
+  @media (hover:none){#seekKnob{transform:translate(-50%,-50%) scale(1)}}
+  .hint{position:absolute;top:50%;padding:.6rem .95rem;border-radius:9999px;background:#000b;color:#fff;font-size:.95rem;font-weight:700;pointer-events:none;opacity:0}
+  .hint.show{animation:hintPop .75s ease-out}
+  @keyframes hintPop{0%{opacity:0;transform:translateY(-50%) scale(.7)}20%{opacity:1;transform:translateY(-50%) scale(1)}80%{opacity:1;transform:translateY(-50%)}100%{opacity:0;transform:translateY(-50%) scale(1.05)}}
+  .mv{animation:rise .5s cubic-bezier(.2,.8,.2,1) both}
+  .heart{transition:background .2s,transform .15s}.heart:active{transform:scale(.85)}
+  .heart.saved{background:#dc2626;color:#fff}.heart.saved svg{fill:currentColor}
   .thumb{transition:transform .25s,box-shadow .25s}
   article:hover .thumb{transform:translateY(-4px) scale(1.02);box-shadow:0 12px 28px #0006}
   #grid article,#related article{animation:rise .5s cubic-bezier(.2,.8,.2,1) both}
@@ -107,15 +125,17 @@
 <noscript><p style="padding:2rem;text-align:center">JB TV needs JavaScript to browse and play live TV channels. Please enable JavaScript and reload.</p></noscript>
 <header class="sticky top-0 z-30 t-bg2 backdrop-blur border-b t-bord px-3 py-2 flex flex-wrap items-center gap-2">
   <div class="flex items-center gap-2 font-extrabold text-lg mr-2 tracking-tight"><img data-logo alt="JB TV logo" class="h-8 w-auto drop-shadow">JB TV</div>
-  <input id="q" type="search" placeholder="Search channels…" class="flex-1 min-w-[150px] max-w-xl t-input t-bord border rounded-full px-4 py-2 text-sm outline-none focus:border-blue-500">
-  <select id="cat" class="t-chip rounded-full px-3 py-2 text-sm outline-none max-w-[45%]"><option value="">All categories</option></select>
-  <select id="lang" class="t-chip rounded-full px-3 py-2 text-sm outline-none max-w-[45%]" title="Language"><option value="">Loading languages…</option></select>
+  <input id="q" type="search" autocomplete="off" enterkeyhint="search" placeholder="Search channels…" class="flex-1 min-w-[150px] max-w-xl t-input t-bord border rounded-full px-4 py-2 text-sm outline-none focus:border-blue-500">
+  <select id="cat" autocomplete="off" class="t-chip rounded-full px-3 py-2 text-sm outline-none max-w-[45%]"><option value="">All categories</option></select>
+  <select id="lang" autocomplete="off" class="t-chip rounded-full px-3 py-2 text-sm outline-none max-w-[45%]" title="Language"><option value="">Loading languages…</option></select>
   <button id="installBtn" class="btn hidden" title="Install JB TV as an app" data-ic="download"><span class="hidden sm:inline">Install</span></button>
   <button id="aboutBtn" class="btn" title="About us" data-ic="info"><span class="hidden sm:inline">About</span></button>
   <button id="theme" class="btn" title="Switch light/dark theme"></button>
 </header>
 
 <main class="p-3 sm:p-5">
+  <div id="tabs" class="flex gap-2 mb-3"><button class="chip on" data-tab="tv">Live TV</button><button class="chip" data-tab="mov">Movies &amp; TV</button></div>
+  <div id="liveView">
   <div id="status" class="text-center t-muted py-20"><img data-logo alt="" class="h-16 w-auto mx-auto mb-3 animate-pulse">Loading playlist…</div>
   <div id="chips" class="no-scrollbar flex gap-2 overflow-x-auto pb-3 mb-2"></div>
   <section id="recentWrap" class="hidden mb-6">
@@ -125,6 +145,7 @@
   <div id="bar" class="hidden flex flex-wrap items-center gap-2 mb-3">
     <span id="count" class="text-xs t-muted mr-auto"></span>
     <button id="hideBtn" class="btn !py-1.5 !px-3 text-xs" title="Hide channels that failed on this site"></button>
+    <button id="clearBtn" class="btn !py-1.5 !px-3 text-xs hidden" title="Clear search, category and language">Clear filters</button>
     <button id="proxyBtn" class="btn !py-1.5 !px-3 text-xs" title="Use a proxy for blocked or HTTP-only streams. Turn it off if it causes problems."></button>
     <button id="rndBtn" class="btn !py-1.5 !px-3 text-xs" title="Play a random channel from this list" data-ic="shuffle">Surprise me</button>
     <button id="scanBtn" class="btn !py-1.5 !px-3 text-xs" title="Check which channels work on this site" data-ic="scan">Scan list</button>
@@ -137,6 +158,17 @@
   <div id="grid" class="grid gap-x-4 gap-y-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"></div>
   <div id="sentinel" class="h-1"></div>
   <div class="text-center mt-8"><button id="more" class="btn hidden">Load more</button></div>
+</div>
+  <section id="movies" class="hidden">
+    <h2 class="sec">Movies &amp; TV</h2>
+    <p class="text-xs t-muted mt-1">Free public-domain and openly licensed films from the Internet Archive, in many languages. Search by title in the box above.</p>
+    <div id="movChips" class="no-scrollbar flex gap-2 overflow-x-auto pb-3 mb-2 mt-3"></div>
+    <div class="flex flex-wrap items-center gap-2 mb-3 text-xs"><span class="t-muted">Maturity</span><div id="matChips" class="flex gap-2"><button class="chip" data-mat="all">All</button><button class="chip" data-mat="safe">Hide mature</button><button class="chip" data-mat="family">Family</button></div><span class="t-muted">Based on tags, not official ratings</span></div>
+    <div class="flex items-center gap-2 mb-3 text-xs"><span class="t-muted">Language</span><select id="movLang" class="t-chip rounded-full px-3 py-1.5 text-xs outline-none" title="Filter movies by language"></select></div>
+    <div id="movStatus" class="text-sm t-muted mb-3"></div>
+    <div id="movGrid" class="grid gap-x-4 gap-y-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"></div>
+    <div class="text-center mt-8"><button id="movMore" class="btn hidden">Load more</button></div>
+  </section>
 </main>
 <footer class="text-center text-xs t-muted px-4 pb-10 pt-4">
   <p class="max-w-2xl mx-auto mb-3">Watch live TV online with JB TV: thousands of news, sports, movies, music, kids and entertainment channels from around the world. Search by name, filter by category or language, and stream in your browser on mobile, tablet or desktop.</p>
@@ -149,9 +181,15 @@
   <div class="max-w-6xl mx-auto p-2 sm:p-4">
     <button id="back" class="btn mb-3" data-ic="back">Back</button>
     <div id="watchSlot" class="bg-black rounded-xl overflow-hidden"></div>
-    <div class="flex items-start justify-between gap-3 mt-3"><h2 id="wTitle" class="text-lg sm:text-xl font-semibold"></h2><button id="shareBtn" class="btn shrink-0" title="Share this channel" data-ic="share">Share</button></div>
+    <div class="flex items-start justify-between gap-3 mt-3"><h2 id="wTitle" class="text-lg sm:text-xl font-semibold"></h2><div class="flex gap-2 shrink-0"><button id="saveBtn" class="btn hidden" title="Save movie"></button><button id="shareBtn" class="btn" title="Share" data-ic="share">Share</button></div></div>
     <p id="wMeta" class="text-sm t-muted"></p>
-    <h2 class="font-semibold mt-6 mb-3">More in this category</h2>
+    <p id="wDesc" class="text-sm t-muted mt-3 max-w-3xl whitespace-pre-line"></p>
+    <div id="eps" class="hidden mt-5 max-w-3xl">
+      <div class="flex items-center justify-between mb-2"><h2 class="sec">Episodes</h2><span id="epCount" class="text-xs t-muted"></span></div>
+      <div id="seasonChips" class="no-scrollbar flex gap-2 overflow-x-auto pb-2"></div>
+      <div id="epList" class="grid gap-2 sm:grid-cols-2 max-h-96 overflow-y-auto pr-1"></div>
+    </div>
+    <h2 id="relH" class="font-semibold mt-6 mb-3">More in this category</h2>
     <div id="related" class="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"></div>
   </div>
 </section>
@@ -174,6 +212,7 @@
       <li class="flex gap-2" style="--i:5"><span data-ic="check" class="text-red-500 shrink-0 mt-0.5"></span>Multiple audio tracks, brightness and aspect-ratio controls</li>
       <li class="flex gap-2" style="--i:6"><span data-ic="check" class="text-red-500 shrink-0 mt-0.5"></span>Light and dark themes, responsive on every screen</li>
       <li class="flex gap-2" style="--i:7"><span data-ic="check" class="text-red-500 shrink-0 mt-0.5"></span>Installable as an app (Install button, or Share → Add to Home Screen on iPhone)</li>
+      <li class="flex gap-2" style="--i:7"><span data-ic="check" class="text-red-500 shrink-0 mt-0.5"></span>Free public-domain movies with Save and Continue watching</li>
     </ul>
     <p class="stag mt-5 text-xs t-muted"><span style="--i:7">Shortcuts: <b>Space/K</b> play·pause, <b>F</b> fullscreen, <b>M</b> mute, <b>A</b> aspect, <b>/</b> search, <b>Esc</b> back.</span></p>
     <p class="stag mt-4 text-xs t-muted rounded-xl t-card p-3"><span style="--i:8">JB TV does not host, store or upload any video. Channels come from the public iptv-org playlists and belong to their respective owners; some may be offline or region-locked. Player powered by HLS.js.</span></p>
@@ -181,6 +220,16 @@
 </div>
 <div id="toast" class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-3 rounded-full bg-[#272727] text-white text-sm pl-4 pr-2 py-2 shadow-2xl ring-1 ring-white/10"><span id="toastTxt"></span><button id="toastAct" class="btn !py-1 !px-3 text-xs !bg-white/15 hidden">Undo</button></div>
 <button id="toTop" class="btn hidden fixed bottom-4 left-4 z-40 !p-3 shadow-lg ring-1 ring-white/10" title="Back to top" data-ic="up"></button>
+<div id="age" class="hidden fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+  <div id="ageCard" class="t-bg rounded-2xl w-full max-w-sm p-6 text-center shadow-2xl ring-1 ring-white/10">
+    <div class="w-14 h-14 mx-auto rounded-full bg-red-600 text-white flex items-center justify-center text-lg font-extrabold">18+</div>
+    <h2 class="text-xl font-bold mt-3">Mature content</h2>
+    <p id="ageTxt" class="text-sm t-muted mt-2"></p>
+    <p class="text-sm mt-3 font-medium">Are you 18 years or older?</p>
+    <div class="flex gap-2 justify-center mt-4"><button id="ageNo" class="btn">No, go back</button><button id="ageYes" class="btn !bg-red-600 !text-white">Yes, I'm 18+</button></div>
+    <p class="text-[11px] t-muted mt-3">This is a self-declaration, not an ID check.</p>
+  </div>
+</div>
 <div id="parking" class="hidden">
 <div id="stage" class="relative bg-black">
   <div id="frame" class="bg-black"><video id="v" class="w-full h-full object-contain" playsinline></video></div>
@@ -191,19 +240,33 @@
     <span class="flex gap-1"><button id="mPlay" class="btn !p-1.5"></button><button id="mOpen" class="btn !p-1.5" title="Expand" data-ic="expand"></button><button id="mClose" class="btn !p-1.5" title="Close" data-ic="close"></button></span>
   </div>
   <button id="bigPlay" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-black/60 text-white text-2xl hover:bg-black/80 inline-flex items-center justify-center"></button>
+  <div id="hintL" class="hint" style="left:12%"></div><div id="hintR" class="hint" style="right:12%"></div>
+  <div id="boost" class="hidden absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/70 text-white text-sm font-semibold pointer-events-none">2× speed</div>
   <div id="ctl" class="flex flex-wrap items-center gap-2 p-2 sm:p-3 text-sm">
+    <div id="seek" class="hidden w-full relative h-6 cursor-pointer select-none" title="Click or drag to skip">
+      <div class="st absolute inset-x-0 top-1/2 -translate-y-1/2 h-1 rounded bg-white/25 transition-all"><div id="seekBuf" class="absolute inset-y-0 left-0 rounded bg-white/40" style="width:0"></div><div id="seekFill" class="absolute inset-y-0 left-0 rounded bg-red-600" style="width:0"></div></div>
+      <div id="seekKnob" class="absolute top-1/2 w-3.5 h-3.5 rounded-full bg-red-600" style="left:0"></div>
+      <div id="seekTip" class="hidden absolute bottom-full mb-1 -translate-x-1/2 px-2 py-0.5 rounded bg-black/80 text-white text-xs tabular-nums pointer-events-none"></div>
+    </div>
     <button id="play" class="btn" title="Play/Pause"></button>
+    <button id="skipB" class="btn hidden" title="Back 10 seconds (J)" data-ic="back10"></button>
+    <button id="skipF" class="btn hidden" title="Forward 10 seconds (L)" data-ic="fwd10"></button>
     <button id="mute" class="btn" title="Mute"></button>
     <input id="vol" type="range" min="0" max="1" step="0.01" value="1" class="w-20 sm:w-28" title="Volume">
+    <span id="timeTxt" class="hidden text-xs tabular-nums text-white/90 whitespace-nowrap"></span>
     <label class="flex items-center gap-1 text-white/80" data-ic="sun"><input id="bri" type="range" min="0.3" max="1.8" step="0.05" value="1" class="w-20 sm:w-28" title="Brightness"></label>
     <button id="ratio" class="btn" title="Aspect: Fit / Stretch / Crop (A)"></button>
     <span class="flex-1"></span>
+    <div id="speedWrap" class="relative hidden">
+      <button id="spd" class="btn" title="Playback speed (&lt; &gt;)">1×</button>
+      <div id="spdMenu" class="hidden absolute bottom-full right-0 mb-2 min-w-[8rem] max-h-40 sm:max-h-64 overflow-y-auto rounded-xl bg-black/90 backdrop-blur p-1 text-sm shadow-xl ring-1 ring-white/15"></div>
+    </div>
     <div id="audWrap" class="relative hidden">
-      <button id="aud" class="btn" title="Audio track" data-ic="audio">Audio</button>
+      <button id="aud" class="btn" title="Audio track" data-ic="audio"><span class="lbl">Audio</span></button>
       <div id="audMenu" class="hidden absolute bottom-full right-0 mb-2 min-w-[11rem] max-h-36 sm:max-h-56 overflow-y-auto rounded-xl bg-black/90 backdrop-blur p-1 text-sm shadow-xl ring-1 ring-white/15"></div>
     </div>
-    <button id="pip" class="btn" title="Picture-in-Picture" data-ic="pip">PiP</button>
-    <button id="minib" class="btn" title="Mini player" data-ic="mini">Mini</button>
+    <button id="pip" class="btn" title="Picture-in-Picture" data-ic="pip"><span class="lbl">PiP</span></button>
+    <button id="minib" class="btn" title="Mini player" data-ic="mini"><span class="lbl">Mini</span></button>
     <button id="fs" class="btn" title="Fullscreen"></button>
   </div>
 </div>
@@ -241,6 +304,10 @@ const P = {
   scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/>',
   download:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
   share:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>',
+  back10:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><text x="12" y="15.5" font-size="7.5" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none">10</text>',
+  fwd10:'<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/><text x="12" y="15.5" font-size="7.5" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none">10</text>',
+  external:'<path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+  heart:'<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/>',
   shuffle:'<path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>',
   up:'<path d="m18 15-6-6-6 6"/>',
   aspect:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h3M7 9v3M17 15h-3M17 15v-3"/>',
@@ -333,6 +400,7 @@ try { hideBad = localStorage.getItem('jbHide') !== '0'; } catch (e) {}
 const saveSets = () => { store.set('jbBad', [...bad]); store.set('jbGood', [...good]); };
 function refreshBar() {
   syncChips(); syncProxyUi();
+  $('clearBtn').classList.toggle('hidden', !($('q').value.trim() || $('cat').value || $('lang').value));
   $('bar').classList.remove('hidden');
   const n = channels.reduce((a, c) => a + (bad.has(c.url) ? 1 : 0), 0);
   $('count').textContent = `${filtered.length.toLocaleString()} channels` + (hideBad && n ? ` · ${n.toLocaleString()} hidden` : '');
@@ -376,7 +444,7 @@ async function scanList() {
   setTimeout(() => { if (!scan) $('scanProg').classList.add('hidden'); }, 3000);
   applyFilter();
 }
-$('scanBtn').onclick = scanList;
+$('scanBtn').onclick = scanList; $('clearBtn').onclick = resetFilters;
 $('scanStop').onclick = () => { if (scan) scan.stop = true; };
 $('hideBtn').onclick = () => { hideBad = !hideBad; try { localStorage.setItem('jbHide', hideBad ? '1' : '0'); } catch (e) {} applyFilter(); };
 $('resetBtn').onclick = () => { if (confirm('Show all hidden channels and forget scan results?')) { bad.clear(); good.clear(); saveSets(); applyFilter(); } };
@@ -405,6 +473,304 @@ async function proxyHealthy(p) { // fetch a tiny known page through the proxy
   catch (e) { return false; }
 }
 $('proxyBtn').onclick = cycleProxy;
+
+// ---- Movies (Internet Archive: public-domain and openly licensed films) ----
+const IA = 'https://archive.org';
+const GENRES = [['Comedy', 'comedy'], ['Drama', 'drama'], ['Horror', 'horror'], ['Sci-Fi', 'sci-fi'], ['Western', 'western'], ['Film Noir', 'film noir'], ['Animation', 'animation'], ['Documentary', 'documentary'], ['Romance', 'romance'], ['Mystery', 'mystery'], ['Silent', 'silent film']];
+const MOVCH = [['discover', '', 'Popular'], ['latest', '', 'Latest added'], ['newest', '', 'Newest films'], ['series', '', 'TV Series'], ['saved', '', 'Saved'], ['recent', '', 'Continue watching'], ['cartoons', '', 'Cartoons'], ...GENRES.map(([l, g]) => ['discover', g, l])];
+const getObj = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } };
+const setObj = (k, x) => { try { localStorage.setItem(k, JSON.stringify(x)); } catch (e) {} };
+let movSaved = getObj('jbMovSaved', []), movPos = getObj('jbMovPos', {});
+let tab = 'tv', movKind = 'discover', movSubject = '', movPage = 1, movTotal = 0, movToken = 0, lastSave = 0;
+const LN = { eng: 'English', en: 'English', hin: 'Hindi', hi: 'Hindi', spa: 'Spanish', es: 'Spanish', fre: 'French', fra: 'French', fr: 'French', ger: 'German', deu: 'German', de: 'German', ita: 'Italian', it: 'Italian', rus: 'Russian', ru: 'Russian', jpn: 'Japanese', ja: 'Japanese', chi: 'Chinese', zho: 'Chinese', zh: 'Chinese', kor: 'Korean', ko: 'Korean', ara: 'Arabic', ar: 'Arabic', tur: 'Turkish', tr: 'Turkish', por: 'Portuguese', pt: 'Portuguese', tam: 'Tamil', tel: 'Telugu', mal: 'Malayalam', ben: 'Bengali', dut: 'Dutch', nld: 'Dutch', swe: 'Swedish', pol: 'Polish' };
+const langName = x => { x = String(x || '').trim(); return !x ? '' : LN[x.toLowerCase()] || (x.length <= 3 ? x.toUpperCase() : x[0].toUpperCase() + x.slice(1).toLowerCase()); };
+const langLabel = x => [...new Set([].concat(x || []).map(langName).filter(Boolean))].slice(0, 3).join(', ');
+const LANG_LIST = ['English', 'Hindi', 'Tamil', 'Telugu', 'Malayalam', 'Bengali', 'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Russian', 'Chinese', 'Japanese', 'Korean', 'Arabic', 'Turkish', 'Dutch', 'Swedish', 'Polish'];
+const langQuery = n => [n.toLowerCase(), ...Object.keys(LN).filter(k => LN[k] === n)].join(' OR ');
+let movLang = ''; try { movLang = localStorage.getItem('jbMovLang') || ''; } catch (e) {}
+$('movLang').innerHTML = '<option value="">All languages</option>' + LANG_LIST.map(n => `<option value="${langQuery(n)}">${n}</option>`).join('');
+$('movLang').value = movLang;
+$('movLang').onchange = e => {
+  movLang = e.target.value; try { localStorage.setItem('jbMovLang', movLang); } catch (x) {}
+  if (tab === 'mov' && movKind !== 'saved' && movKind !== 'recent') renderMovies();
+};
+const qStore = { tv: '', mov: '' };
+let movMat = 'safe'; try { movMat = localStorage.getItem('jbMat') || 'safe'; } catch (e) {}
+function syncMat() { document.querySelectorAll('#matChips .chip').forEach(b => b.classList.toggle('on', b.dataset.mat === movMat)); }
+$('matChips').onclick = e => {
+  const b = e.target.closest('[data-mat]'); if (!b) return;
+  movMat = b.dataset.mat; try { localStorage.setItem('jbMat', movMat); } catch (e) {}
+  syncMat(); if (tab === 'mov' && movKind === 'discover') renderMovies();
+};
+const isSaved = id => movSaved.some(x => x.id === id);
+const one = x => Array.isArray(x) ? x[0] : x;
+
+const MATURE = 'horror OR erotic OR erotica OR nudity OR sexploitation OR exploitation OR gore OR grindhouse OR "x-rated" OR pornography';
+const MATURE_TITLE = 'nude OR nudist OR erotic OR sex OR sexy OR porn';
+const MAIN = 'feature_films OR film_noir OR silent_films OR scifi_horror OR comedy_films';
+const KIND_COLL = { series: 'classic_tv', cartoons: 'animationandcartoons' }, KIND_SORT = { latest: 'addeddate desc', newest: 'year desc' };
+async function iaSearch(q, subject, page, mat = 'all', coll = MAIN, sort = 'downloads desc', lang = '') {
+  const parts = [`collection:(${coll})`, 'mediatype:(movies)'];
+  const clean = q.replace(/[^\p{L}\p{N} ]/gu, ' ').trim();
+  if (clean) parts.push(`title:(${clean})`);
+  if (subject) parts.push(`subject:("${subject}")`);
+  if (lang) parts.push(`language:(${lang})`);
+  if (sort.startsWith('year')) parts.push('year:[1900 TO 2026]');
+  if (mat !== 'all') parts.push(`NOT subject:(${MATURE})`, `NOT title:(${MATURE_TITLE})`);
+  if (mat === 'family') parts.push('subject:(family OR children OR kids OR animation OR cartoon OR "fairy tale")');
+  const p = new URLSearchParams({ q: parts.join(' AND '), rows: '48', page: String(page), output: 'json' });
+  ['identifier', 'title', 'year', 'subject', 'language'].forEach(f => p.append('fl[]', f));
+  p.append('sort[]', sort);
+  const r = await fetch(`${IA}/advancedsearch.php?${p}`);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return (await r.json()).response;
+}
+const movCard = (m, i, pct) => `<article data-mid="${esc(m.id)}" data-title="${esc(m.title)}" data-file="${esc(m.file || '')}" data-m="${m.mature ? 1 : 0}" class="mv group cursor-pointer" style="animation-delay:${Math.min(i, 24) * 30}ms">
+  <div class="thumb relative aspect-video rounded-xl t-card overflow-hidden flex items-center justify-center"><span class="text-2xl font-bold text-gray-600">${esc((m.title || '').slice(0, 2).toUpperCase())}</span><img src="${IA}/services/img/${encodeURIComponent(m.id)}" loading="lazy" onload="this.classList.add('ld')" onerror="this.remove()" class="absolute inset-0 w-full h-full object-cover ${m.mature ? 'blur-md scale-110' : ''}">
+    ${m.mature ? '<span class="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-bold">18+</span>' : ''}
+    <button data-save="${esc(m.id)}" class="heart absolute top-1.5 right-1.5 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-red-600 ${isSaved(m.id) ? 'saved' : ''}" title="Save">${ic('heart', 16)}</button>
+    ${pct ? `<div class="absolute bottom-0 left-0 h-1 bg-red-600" style="width:${pct}%"></div>` : ''}</div>
+  <h3 class="mt-2 text-sm font-medium line2">${esc(m.title)}</h3><p class="text-xs t-muted">${esc([m.year, m.lang].filter(Boolean).join(' · '))}</p></article>`;
+function syncMovChips() { document.querySelectorAll('#movChips .chip').forEach(b => { const [k, g] = MOVCH[+b.dataset.i]; b.classList.toggle('on', k === movKind && g === movSubject); }); }
+async function renderMovies(append = false) {
+  const tok = ++movToken, g = $('movGrid'), st = $('movStatus'), more = $('movMore');
+  syncMovChips();
+  if (movKind === 'saved' || movKind === 'recent') {
+    const list = movKind === 'saved' ? movSaved : Object.entries(movPos).sort((a, b) => b[1].ts - a[1].ts).map(([k, x]) => ({ id: x.id || k, file: x.file || '', title: x.title, pct: Math.round(x.t / x.d * 100) }));
+    g.innerHTML = list.map((m, i) => movCard(m, i, m.pct)).join(''); more.classList.add('hidden');
+    st.textContent = list.length ? '' : movKind === 'saved' ? 'Nothing saved yet. Tap the heart on any movie.' : 'Movies you start watching show up here so you can continue.';
+    return;
+  }
+  if (!append) { g.innerHTML = SKEL.repeat(12); movPage = 1; }
+  st.textContent = '';
+  try {
+    const res = await iaSearch($('q').value.trim(), movSubject, movPage, movMat, KIND_COLL[movKind] || MAIN, KIND_SORT[movKind] || 'downloads desc', movLang);
+    if (tok !== movToken) return;
+    movTotal = res.numFound;
+    const html = res.docs.map((d, i) => movCard({ id: d.identifier, title: one(d.title) || d.identifier, year: one(d.year), lang: langLabel(d.language), mature: isHigh(d.subject, one(d.title)) }, i)).join('');
+    if (append) g.insertAdjacentHTML('beforeend', html); else g.innerHTML = html;
+    st.textContent = movTotal || append ? `${movTotal.toLocaleString()} movies` : 'No movies found.' + (movMat !== 'all' ? ' The maturity filter is on – try "All".' : ' Try another title.');
+    more.classList.toggle('hidden', g.querySelectorAll('article').length >= movTotal);
+  } catch (e) {
+    if (tok === movToken) { g.innerHTML = ''; more.classList.add('hidden'); st.innerHTML = 'Could not load movies from the Internet Archive. <button id="movRetry" class="underline">Retry</button>'; }
+  }
+}
+function searchMovies() { if (movKind === 'saved' || movKind === 'recent') { movKind = 'discover'; movSubject = ''; } renderMovies(); }
+function buildMovChips() { $('movChips').innerHTML = MOVCH.map(([k, g, l], i) => `<button class="chip" data-i="${i}">${l}</button>`).join(''); }
+function setTab(t) {
+  stopQueued(); qStore[tab] = $('q').value; tab = t;
+  const mv = t === 'mov';
+  $('liveView').classList.toggle('hidden', mv); $('movies').classList.toggle('hidden', !mv);
+  $('cat').classList.toggle('hidden', mv); $('lang').classList.toggle('hidden', mv);
+  document.querySelectorAll('#tabs .chip').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  $('q').placeholder = mv ? 'Search movies…' : 'Search channels…'; $('q').value = qStore[t];
+  try { history.replaceState(history.state, '', mv ? '?tab=movies' : location.pathname + filterQuery()); } catch (e) {}
+  if (mv) renderMovies(); else if (channels.length) applyFilter();
+}
+$('tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b && b.dataset.tab !== tab) setTab(b.dataset.tab); };
+$('movChips').onclick = e => { const b = e.target.closest('.chip'); if (b) { [movKind, movSubject] = MOVCH[+b.dataset.i]; renderMovies(); } };
+$('movMore').onclick = () => { movPage++; renderMovies(true); };
+let lastMore = 0;
+new IntersectionObserver(es => { if (es[0].isIntersecting && tab === 'mov' && Date.now() - lastMore > 1500) { lastMore = Date.now(); $('movMore').click(); } }, { rootMargin: '600px' }).observe($('movMore'));
+$('movStatus').onclick = e => { if (e.target.id === 'movRetry') renderMovies(); };
+function toggleSave(id, title) {
+  if (isSaved(id)) { movSaved = movSaved.filter(x => x.id !== id); toast('Removed from Saved'); }
+  else { movSaved.unshift({ id, title }); toast('Saved'); }
+  setObj('jbMovSaved', movSaved);
+  document.querySelectorAll(`[data-save="${CSS.escape(id)}"]`).forEach(b => b.classList.toggle('saved', isSaved(id)));
+  if (tab === 'mov' && movKind === 'saved') renderMovies();
+}
+$('movGrid').onclick = async e => {
+  const h = e.target.closest('[data-save]');
+  if (h) { const a = h.closest('article'); toggleSave(h.dataset.save, a.dataset.title); return; }
+  const a = e.target.closest('article'); if (!a) return;
+  if (a.dataset.m === '1' && !(await ageGate(a.dataset.title))) return;
+  openMovie(a.dataset.mid, a.dataset.title, a.dataset.file || '');
+};
+function updateSaveBtn() {
+  const sv = !!cur && isSaved(cur.mid), b = $('saveBtn');
+  b.innerHTML = ic('heart') + (sv ? 'Saved' : 'Save');
+  b.classList.toggle('!bg-red-600', sv); b.classList.toggle('!text-white', sv);
+  b.querySelector('svg').style.fill = sv ? 'currentColor' : 'none';
+}
+$('saveBtn').onclick = () => { if (cur && cur.isMovie) { toggleSave(cur.mid, cur.name); updateSaveBtn(); } };
+function savePos() { // remember where you stopped, so "Continue watching" can resume
+  if (!cur || !cur.isMovie || !v.duration || !isFinite(v.duration) || v.currentTime < 5) return;
+  if (v.currentTime / v.duration > .95) delete movPos[posKey()];
+  else movPos[posKey()] = { id: cur.mid, file: cur.file || '', t: Math.floor(v.currentTime), d: Math.floor(v.duration), ts: Date.now(), title: cur.label || cur.name };
+  const keep = Object.entries(movPos).sort((a, b) => b[1].ts - a[1].ts).slice(0, 40);
+  movPos = Object.fromEntries(keep); setObj('jbMovPos', movPos);
+}
+v.addEventListener('timeupdate', () => { if (Date.now() - lastSave > 5000) { lastSave = Date.now(); savePos(); } });
+v.addEventListener('pause', savePos);
+function pickFile(files) {
+  const mp4 = files.filter(f => /\.(mp4|m4v)$/i.test(f.name));
+  for (const fmt of ['h.264', 'h.264 ia', 'mpeg4', '512kb mpeg4']) { const f = mp4.find(x => (x.format || '').toLowerCase() === fmt); if (f) return f; }
+  return mp4[0] || files.find(f => /\.ogv$/i.test(f.name)) || null;
+}
+const stripHtml = h => { const d = document.createElement('div'); d.innerHTML = h; return d.textContent.replace(/\s+/g, ' ').trim(); };
+const HIGH = /\b(erotic|erotica|nudity|nudist|nude|sexploitation|exploitation|gore|grindhouse|x-rated|pornography|porn|sex|sexy|adult)\b/i;
+const isHigh = (subj, title) => HIGH.test([].concat(subj || []).join(' ') + ' ' + (title || ''));
+function ageGate(title) { // self-declared 18+ question, asked once per browser session
+  try { if (sessionStorage.getItem('jbAge18') === '1') return Promise.resolve(true); } catch (e) {}
+  return new Promise(res => {
+    $('ageTxt').textContent = `“${title || 'This title'}” is tagged as mature content and may not be suitable for anyone under 18.`;
+    $('age').classList.remove('hidden'); re($('ageCard'), 'pop');
+    const done = ok => { $('age').classList.add('hidden'); if (ok) { try { sessionStorage.setItem('jbAge18', '1'); } catch (e) {} } res(ok); };
+    $('ageYes').onclick = () => done(true);
+    $('ageNo').onclick = () => { done(false); toast('Okay, going back'); };
+    $('age').onclick = e => { if (e.target.id === 'age') $('ageNo').click(); };
+  });
+}
+// ---- seasons & episodes (items with several video files) ----
+const posKey = () => cur.mid + '#' + (cur.file || '');
+let epSeason = 0;
+function epInfo(f) {
+  const t = (f.title || f.name).replace(/[_.]+/g, ' ');
+  let m = t.match(/s(?:eason)?\s*0*(\d{1,2})\s*[-x ]?\s*e(?:p(?:isode)?)?\s*0*(\d{1,3})/i) || t.match(/\b0*(\d{1,2})x0*(\d{1,3})\b/i);
+  if (m) return { season: +m[1], ep: +m[2] };
+  m = t.match(/(?:^|\s)e(?:p(?:isode)?)?\s*0*(\d{1,3})\b/i) || t.match(/\bepisode\s*0*(\d{1,3})\b/i);
+  return { season: null, ep: m ? +m[1] : null };
+}
+const epTitle = f => (f.title || f.name.replace(/\.[^.]+$/, '')).replace(/_+/g, ' ').trim();
+function epLabel(f, i) { const { season, ep } = epInfo(f); return season != null && ep != null ? `S${season} E${ep}` : ep != null ? `E${ep}` : `Part ${i + 1}`; }
+const dur = l => { if (!l) return ''; const n = String(l).includes(':') ? String(l).split(':').reduce((a, x) => a * 60 + +x, 0) : parseFloat(l); return n ? fmt(n) : ''; };
+function episodesOf(files) {
+  const groups = new Map();
+  files.filter(f => /\.(mp4|m4v|ogv)$/i.test(f.name) && !/trailer|sample|preview|promo/i.test(f.name)).forEach(f => {
+    const k = (f.original || f.name).replace(/\.[^.]+$/, ''); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(f);
+  });
+  const eps = []; groups.forEach(list => { const f = pickFile(list); if (f) eps.push(f); });
+  return eps.sort((a, b) => { const x = epInfo(a), y = epInfo(b); return ((x.season ?? 0) - (y.season ?? 0)) || ((x.ep ?? 1e9) - (y.ep ?? 1e9)) || a.name.localeCompare(b.name, undefined, { numeric: true }); });
+}
+function renderEpisodes() {
+  const eps = cur.eps, box = $('eps');
+  if (eps.length < 2) { box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+  const seasons = [...new Set(eps.map(f => epInfo(f).season).filter(x => x != null))].sort((a, b) => a - b);
+  if (epSeason && !seasons.includes(epSeason)) epSeason = 0;
+  $('epCount').textContent = `${eps.length} ${seasons.length || eps.some(f => epInfo(f).ep != null) ? 'episodes' : 'parts'}`;
+  $('seasonChips').innerHTML = seasons.length > 1 ? [0, ...seasons].map(n => `<button class="chip ${n === epSeason ? 'on' : ''}" data-season="${n}">${n ? 'Season ' + n : 'All'}</button>`).join('') : '';
+  $('epList').innerHTML = eps.map((f, i) => [f, i]).filter(([f]) => !epSeason || epInfo(f).season === epSeason).map(([f, i]) =>
+    `<button data-ep="${i}" class="text-left rounded-xl t-card px-3 py-2 flex items-center justify-between gap-3 transition-colors hover:bg-[var(--chiph)] ${i === cur.epI ? '!bg-red-600 !text-white' : ''}"><span class="truncate text-sm"><b class="mr-2">${esc(epLabel(f, i))}</b>${esc(epTitle(f))}</span><span class="text-xs opacity-70 shrink-0">${dur(f.length)}</span></button>`).join('');
+}
+$('seasonChips').onclick = e => { const b = e.target.closest('[data-season]'); if (b && cur && cur.isMovie) { epSeason = +b.dataset.season; renderEpisodes(); } };
+$('epList').onclick = e => { const b = e.target.closest('[data-ep]'); if (b && cur && cur.isMovie) playEpisode(+b.dataset.ep); };
+function playEpisode(i) {
+  const f = cur.eps[i]; if (!f) return;
+  savePos();
+  cur.epI = i; cur.file = f.name;
+  const multi = cur.eps.length > 1, tag = multi ? epLabel(f, i) : '';
+  cur.label = multi ? `${cur.name} · ${tag}` : cur.name;
+  $('wMeta').textContent = [tag && `${tag} · ${epTitle(f)}`, cur.year, cur.lang, cur.creator, 'Internet Archive'].filter(Boolean).join(' • ');
+  const pos = movPos[posKey()] || (multi ? null : movPos[cur.mid]);
+  v.onloadedmetadata = () => { if (pos && pos.t > 10 && v.duration > pos.t + 10) { v.currentTime = pos.t; toast(`Resumed at ${Math.floor(pos.t / 60)}:${String(pos.t % 60).padStart(2, '0')}`); } };
+  v.onerror = () => { if (cur && cur.isMovie) fail('This video could not be played. Try another one.'); };
+  spin(true); $('err').classList.add('hidden');
+  v.src = `${IA}/download/${encodeURIComponent(cur.mid)}/${f.name.split('/').map(encodeURIComponent).join('/')}`;
+  v.play().catch(() => {});
+  const s = epInfo(f).season; if (s != null && epSeason && epSeason !== s) epSeason = s;
+  renderEpisodes();
+}
+v.addEventListener('ended', () => { if (cur && cur.isMovie && cur.eps && cur.epI < cur.eps.length - 1) { toast('Up next: ' + epLabel(cur.eps[cur.epI + 1], cur.epI + 1)); playEpisode(cur.epI + 1); } });
+async function openMovie(id, title = '', file = '') {
+  savePos(); v.pause(); v.removeAttribute('src'); v.load(); // so the old video's time is never saved under the new title
+  if (hls) { hls.destroy(); hls = null; } renderAudio(); clearTimeout(startT); v.onloadedmetadata = null;
+  cur = { name: title || 'Loading…', url: 'ia:' + id, cats: [], langs: [], isMovie: true, mid: id, id: -1, file: '', eps: [], epI: 0 };
+  curVia = 0; $('err').classList.add('hidden'); spin(true);
+  const link = '?m=' + encodeURIComponent(id);
+  try { if (mode !== 'watch') history.pushState({ w: 1 }, '', link); else history.replaceState(history.state, '', link); } catch (e) {}
+  $('wTitle').textContent = title; $('wMeta').textContent = ''; $('wDesc').textContent = ''; $('related').innerHTML = ''; $('eps').classList.add('hidden');
+  $('relH').classList.add('hidden'); $('saveBtn').classList.remove('hidden'); updateSaveBtn();
+  setMode('watch'); $('watch').scrollTop = 0; v.playbackRate = 1; syncMovieUi();
+  try {
+    const r = await fetch(`${IA}/metadata/${encodeURIComponent(id)}`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    if (!cur || cur.mid !== id) return; // you moved on
+    const md = j.metadata || {};
+    cur.name = one(md.title) || title || id; cur.year = one(md.year); cur.creator = one(md.creator); cur.lang = langLabel(md.language);
+    document.title = `${cur.name} – Watch Free | JB TV`; $('wTitle').textContent = cur.name;
+    if (isHigh(md.subject, cur.name) && !(await ageGate(cur.name))) { // mature: ask before anything plays
+      if (cur && cur.mid === id) { closePlayer(); if (history.state && history.state.w) history.back(); }
+      return;
+    }
+    if (!cur || cur.mid !== id) return;
+    $('wDesc').textContent = stripHtml([].concat(md.description || '').join(' ')).slice(0, 900);
+    const eps = episodesOf(j.files || []);
+    if (!eps.length) throw new Error('no playable video file');
+    cur.eps = eps;
+    const last = Object.values(movPos).filter(x => x.id === id).sort((a, b) => b.ts - a.ts)[0];
+    const want = file || (last && last.file) || '';
+    const i = Math.max(0, eps.findIndex(f => f.name === want));
+    epSeason = epInfo(eps[i]).season || 0;
+    playEpisode(i);
+  } catch (e) { if (cur && cur.mid === id) fail(`This title could not be loaded (${e.message}). Try another one.`); }
+}
+function reopen() { // expand the mini-player back to the watch page
+  if (!cur) return;
+  if (!cur.isMovie) return openWatch(cur);
+  try { history.pushState({ w: 1 }, '', '?m=' + encodeURIComponent(cur.mid)); } catch (e) {}
+  setMode('watch');
+}
+
+// ---- Player extras for movies: seek bar, skip 10s, speed, hold for 2x ----
+const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+const fmt = t => { t = Math.max(0, Math.floor(t || 0)); const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), sc = t % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(sc).padStart(2, '0'); };
+let seeking = false, dragRatio = 0, lastTap = 0, tapT = 0, hold2 = false, holdT2 = 0, prevRate = 1;
+function syncMovieUi() { // movie-only controls are hidden for live channels
+  const m = !!(cur && cur.isMovie);
+  stage.classList.toggle('movie', m);
+  ['seek', 'skipB', 'skipF', 'timeTxt', 'speedWrap'].forEach(id => $(id).classList.toggle('hidden', !m));
+  if (!m) { v.playbackRate = 1; $('spdMenu').classList.add('hidden'); }
+  updateSeek();
+}
+function updateSeek() {
+  if (!cur || !cur.isMovie) return;
+  const d = v.duration, t = seeking ? dragRatio * (d || 0) : v.currentTime;
+  if (!isFinite(d) || !d) { $('timeTxt').textContent = fmt(t); return; }
+  let b = 0; for (let i = 0; i < v.buffered.length; i++) if (v.buffered.start(i) <= v.currentTime + .5 && v.buffered.end(i) >= v.currentTime) b = v.buffered.end(i);
+  const pc = t / d * 100;
+  $('seekFill').style.width = pc + '%'; $('seekKnob').style.left = pc + '%'; $('seekBuf').style.width = Math.max(b, t) / d * 100 + '%';
+  $('timeTxt').innerHTML = `${fmt(t)} / ${fmt(d)}<span class="hidden sm:inline"> · ${fmt(d - t)} left</span>`;
+}
+['timeupdate', 'progress', 'durationchange', 'loadedmetadata', 'seeked'].forEach(ev => v.addEventListener(ev, updateSeek));
+const seekEl = $('seek');
+const ratioAt = e => { const rc = seekEl.getBoundingClientRect(); return Math.min(1, Math.max(0, (e.clientX - rc.left) / rc.width)); };
+seekEl.addEventListener('pointerdown', e => { if (!isFinite(v.duration)) return; seeking = true; dragRatio = ratioAt(e); seekEl.classList.add('drag'); seekEl.setPointerCapture(e.pointerId); updateSeek(); });
+seekEl.addEventListener('pointermove', e => {
+  if (!isFinite(v.duration)) return;
+  const q = ratioAt(e), tip = $('seekTip'); tip.textContent = fmt(q * v.duration); tip.style.left = q * 100 + '%'; tip.classList.remove('hidden');
+  if (seeking) { dragRatio = q; updateSeek(); }
+});
+seekEl.addEventListener('pointerup', e => { if (!seeking) return; seeking = false; seekEl.classList.remove('drag'); v.currentTime = ratioAt(e) * v.duration; wake(); updateSeek(); });
+seekEl.addEventListener('pointercancel', () => { seeking = false; seekEl.classList.remove('drag'); });
+seekEl.addEventListener('pointerleave', () => $('seekTip').classList.add('hidden'));
+function seekBy(sec, side) {
+  const d = v.duration; if (!isFinite(d)) return;
+  v.currentTime = Math.min(d, Math.max(0, v.currentTime + sec)); wake();
+  const h = $(side === 'l' ? 'hintL' : 'hintR'); h.textContent = (sec > 0 ? '+' : '−') + Math.abs(sec) + 's'; re(h, 'show');
+}
+$('skipB').onclick = () => seekBy(-10, 'l'); $('skipF').onclick = () => seekBy(10, 'r');
+function renderSpeed() {
+  $('spd').textContent = v.playbackRate + '×';
+  $('spdMenu').innerHTML = SPEEDS.map(x => `<button data-s="${x}" class="w-full flex items-center justify-between gap-4 px-3 py-1.5 rounded-lg text-left hover:bg-white/15 ${x === v.playbackRate ? 'text-red-400 font-semibold' : 'text-white'}"><span>${x === 1 ? 'Normal' : x + '×'}</span>${x === v.playbackRate ? ic('check', 16) : ''}</button>`).join('');
+}
+v.addEventListener('ratechange', renderSpeed);
+$('spd').onclick = () => { const m = $('spdMenu'); m.classList.toggle('hidden'); if (!m.classList.contains('hidden')) re(m, 'menu-in'); };
+$('spdMenu').onclick = e => { const b = e.target.closest('[data-s]'); if (b) { v.playbackRate = +b.dataset.s; $('spdMenu').classList.add('hidden'); } };
+document.addEventListener('click', e => { if (!e.target.closest('#speedWrap')) $('spdMenu').classList.add('hidden'); });
+function stepSpeed(d) { const i = SPEEDS.indexOf(v.playbackRate); v.playbackRate = SPEEDS[Math.min(SPEEDS.length - 1, Math.max(0, (i < 0 ? 3 : i) + d))]; }
+renderSpeed();
+// press and hold the picture = 2x speed until you let go
+v.addEventListener('pointerdown', e => {
+  if (mode !== 'watch' || !cur || !cur.isMovie || e.button > 0) return;
+  clearTimeout(holdT2);
+  holdT2 = setTimeout(() => { if (v.paused) return; hold2 = true; prevRate = v.playbackRate; v.playbackRate = 2; $('boost').classList.remove('hidden'); }, 450);
+});
+const endHold2 = () => { clearTimeout(holdT2); if (hold2) { v.playbackRate = prevRate; $('boost').classList.add('hidden'); setTimeout(() => hold2 = false, 150); } };
+['pointerup', 'pointercancel', 'pointerleave'].forEach(t => v.addEventListener(t, endHold2));
+v.addEventListener('contextmenu', e => { if (mode === 'watch') e.preventDefault(); });
 
 // ---- Toast ----
 let toastT;
@@ -476,17 +842,34 @@ function card(c, i = 0) {
     <h3 class="mt-2 text-sm font-medium line2">${esc(c.name)}</h3>
     <p class="text-xs t-muted truncate">${esc(c.cats.join(' · '))}</p></article>`;
 }
-function syncUrl() { // keep ?q= ?cat= ?lang= in the address bar so a filtered view can be shared
-  if (mode === 'watch') return;
+function filterQuery() { // ?q= ?cat= ?lang= for the current controls
   const p = new URLSearchParams(), q = $('q').value.trim(), cat = $('cat').value, lang = $('lang').value;
   if (q) p.set('q', q); if (cat) p.set('cat', cat); if (lang) p.set('lang', lang);
-  const qs = p.toString(); history.replaceState(history.state, '', location.pathname + (qs ? '?' + qs : ''));
+  const qs = p.toString(); return qs ? '?' + qs : '';
+}
+function syncUrl() { // keep the address bar in step with the controls so a filtered view can be shared
+  if (mode === 'watch' || tab === 'mov') return;
+  try { history.replaceState(history.state, '', location.pathname + filterQuery()); } catch (e) {}
+}
+function resetFilters() { // clear search + category + language and show every channel again
+  $('q').value = ''; $('cat').value = ''; $('lang').value = ''; qStore.tv = '';
+  clearTimeout(t); applyFilter(); window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function applyUrlState() { // make the controls (and the grid) follow the address bar after Back / Forward
+  const P = new URLSearchParams(location.search);
+  if (P.get('c') || P.get('m') || P.get('tab')) return;
+  const has = (sel, v) => [...sel.options].some(o => o.value === v) ? v : '';
+  const q = P.get('q') || '', cat = has($('cat'), P.get('cat') || ''), lang = has($('lang'), P.get('lang') || '');
+  if (q === $('q').value.trim() && cat === $('cat').value && lang === $('lang').value) return;
+  $('q').value = q; $('cat').value = cat; $('lang').value = lang;
+  if (channels.length) applyFilter();
 }
 function applyFilter() {
   const q = $('q').value.trim().toLowerCase(), cat = $('cat').value, lang = $('lang').value;
   filtered = channels.filter(c => (!hideBad || !bad.has(c.url)) && (!cat || c.cats.includes(cat)) && (!lang || c.langs.includes(lang)) && (!q || c.name.toLowerCase().includes(q)));
   stopPreview(); $('grid').innerHTML = ''; shown = 0;
   syncUrl(); refreshBar();
+  if (!filtered.length) $('grid').innerHTML = '<div class="col-span-full text-center t-muted py-16">No channels match. <button id="noRes" class="underline hover:text-red-500">Clear filters</button></div>';
   more();
 }
 function more() {
@@ -494,10 +877,20 @@ function more() {
   shown = Math.min(shown + PAGE, filtered.length);
   $('more').classList.toggle('hidden', shown >= filtered.length);
 }
-let t; $('q').oninput = () => { clearTimeout(t); t = setTimeout(applyFilter, 200); };
+let t;
+const stopQueued = () => clearTimeout(t);
+const runSearch = () => { clearTimeout(t); tab === 'mov' ? searchMovies() : applyFilter(); };
+const queueFilter = () => { clearTimeout(t); t = setTimeout(runSearch, 250); };
+$('q').oninput = queueFilter;
+$('q').addEventListener('search', queueFilter); // the clear (x) button in Safari / iOS fires "search"
+$('q').addEventListener('change', runSearch);
+$('q').addEventListener('keydown', e => {
+  if (e.key === 'Enter') runSearch();
+  else if (e.key === 'Escape' && $('q').value) { e.stopPropagation(); $('q').value = ''; runSearch(); }
+});
 $('cat').onchange = $('lang').onchange = applyFilter;
 $('more').onclick = more;
-const clickCard = e => { if (held) return; const a = e.target.closest('article'); if (a) openWatch(channels[+a.dataset.id]); };
+const clickCard = e => { if (e.target.closest('#noRes')) return resetFilters(); if (held) return; const a = e.target.closest('article'); if (a) openWatch(channels[+a.dataset.id]); };
 $('grid').oncontextmenu = e => { if (matchMedia('(pointer: coarse)').matches && e.target.closest('article')) e.preventDefault(); };
 $('grid').onclick = clickCard; $('related').onclick = clickCard;
 
@@ -553,7 +946,8 @@ function netMsg(c, d, viaProx) {
 // and relative links work too.
 let curVia = 0, proxyFails = 0, startT = 0, vidT = 0;
 function startStream(c, n = 0) {
-  cur = c; curVia = n; $('err').classList.add('hidden'); spin(true);
+  if (n === 0) savePos(); v.onloadedmetadata = null;
+  cur = c; curVia = n; $('err').classList.add('hidden'); spin(true); syncMovieUi();
   if (hls) { hls.destroy(); hls = null; }
   renderAudio();
   const px = proxyList(), via = n > 0 ? px[n - 1] : null, total = px.length + 1;
@@ -591,11 +985,12 @@ async function giveUp(c, d, n, msg) {
 }
 function fail(m) {
   spin(false);
-  $('err').innerHTML = `<div class="max-w-sm"><p>${m}</p><div class="flex flex-wrap gap-2 justify-center mt-3"><button id="retry" class="btn !text-white">Retry</button><button id="proxyErr" class="btn !text-white">Proxy: ${PLABEL[proxyMode]}</button><button id="hideCh" class="btn !text-white">Hide channel</button></div></div>`;
+  const live = !(cur && cur.isMovie);
+  $('err').innerHTML = `<div class="max-w-sm"><p>${m}</p><div class="flex flex-wrap gap-2 justify-center mt-3"><button id="retry" class="btn !text-white">Retry</button>${live ? `<button id="proxyErr" class="btn !text-white">Proxy: ${PLABEL[proxyMode]}</button><button id="hideCh" class="btn !text-white">Hide channel</button>` : ''}</div></div>`;
   $('err').classList.remove('hidden');
 }
 $('err').onclick = e => {
-  if (e.target.closest('#retry') && cur) startStream(cur);
+  if (e.target.closest('#retry') && cur) { if (cur.isMovie) openMovie(cur.mid, cur.name); else startStream(cur); }
   if (e.target.closest('#proxyErr') && cur) { cycleProxy(); startStream(cur); }
   if (e.target.closest('#hideCh') && cur) { bad.add(cur.url); saveSets(); closePlayer(); if (history.state && history.state.w) history.back(); applyFilter(); }
 };
@@ -614,7 +1009,7 @@ function setMode(m) {
 }
 const chId = c => c.tvg || 'h' + [...c.url].reduce((h, ch) => (h * 33 + ch.charCodeAt(0)) >>> 0, 5381).toString(36);
 function openWatch(c) {
-  stopPreview();
+  stopPreview(); $('eps').classList.add('hidden'); $('saveBtn').classList.add('hidden'); $('relH').classList.remove('hidden'); $('wDesc').textContent = '';
   if (mode === 'none' || cur !== c) startStream(c);
   const link = '?c=' + encodeURIComponent(chId(c));
   try { if (mode !== 'watch') history.pushState({ w: 1 }, '', link); else history.replaceState(history.state, '', link); } catch (e) {}
@@ -627,17 +1022,19 @@ function openWatch(c) {
 }
 function minimize() { if (mode === 'watch') setMode('mini'); }
 function closePlayer() {
-  v.pause(); if (hls) { hls.destroy(); hls = null; }
+  savePos(); v.pause(); if (hls) { hls.destroy(); hls = null; }
   v.removeAttribute('src'); v.load();
   $('parking').appendChild(stage); stage.classList.remove('mini');
   $('watch').classList.add('hidden'); $('miniSlot').classList.add('hidden');
-  document.body.style.overflow = ''; mode = 'none'; cur = null; document.title = BASE_TITLE;
-  history.replaceState(history.state, '', location.pathname);
+  document.body.style.overflow = ''; mode = 'none'; cur = null; document.title = BASE_TITLE; syncMovieUi();
+  try { history.replaceState(history.state, '', location.pathname + filterQuery()); } catch (e) {}
 }
 $('back').onclick = () => history.state && history.state.w ? history.back() : minimize();
 window.addEventListener('popstate', minimize);
+window.addEventListener('popstate', () => { if (mode !== 'watch' && tab === 'tv') applyUrlState(); });
+window.addEventListener('pageshow', e => { if (e.persisted && tab === 'tv') applyUrlState(); });
 $('minib').onclick = $('back').onclick;
-$('mOpen').onclick = () => cur && openWatch(cur);
+$('mOpen').onclick = () => reopen();
 $('mClose').onclick = closePlayer;
 const aboutOpen = () => !$('about').classList.contains('hidden');
 function openAbout() { $('about').classList.remove('hidden'); re($('about'), 'fade'); re($('aboutCard'), 'pop'); document.body.style.overflow = 'hidden'; }
@@ -647,7 +1044,8 @@ $('aboutClose').onclick = closeAbout;
 $('about').onclick = e => { if (e.target === $('about')) closeAbout(); };
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  if (aboutOpen()) closeAbout();
+  if (!$('age').classList.contains('hidden')) $('ageNo').click();
+  else if (aboutOpen()) closeAbout();
   else if (mode === 'watch' && !document.fullscreenElement) $('back').onclick();
 });
 
@@ -656,7 +1054,7 @@ const toggle = () => v.paused ? v.play() : v.pause();
 $('play').onclick = $('mPlay').onclick = $('bigPlay').onclick = toggle;
 // YouTube-style overlay: click/tap only reveals controls (no pause); double-click = fullscreen
 let idleT;
-function hide() { if (!v.paused && mode === 'watch' && $('audMenu').classList.contains('hidden')) stage.classList.add('idle'); }
+function hide() { if (!v.paused && mode === 'watch' && !seeking && $('audMenu').classList.contains('hidden') && $('spdMenu').classList.contains('hidden')) stage.classList.add('idle'); }
 function wake() {
   stage.classList.remove('idle'); clearTimeout(idleT);
   idleT = setTimeout(hide, 2000);
@@ -664,18 +1062,30 @@ function wake() {
 stage.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') wake(); });
 stage.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') hide(); });
 $('ctl').addEventListener('input', wake); $('ctl').addEventListener('click', wake);
-v.onclick = () => {
-  if (moved) return;
-  if (mode === 'mini') return cur && openWatch(cur);
-  // 1st click/tap shows controls, next click hides them (while playing)
-  stage.classList.contains('idle') || v.paused ? wake() : (clearTimeout(idleT), hide());
+v.onclick = e => { // tap shows/hides controls; double-tap sides = skip 10s (movies), middle = fullscreen
+  if (moved || hold2) return;
+  if (mode === 'mini') return reopen();
+  const now = Date.now(), rc = v.getBoundingClientRect(), x = (e.clientX - rc.left) / rc.width;
+  if (now - lastTap < 320) {
+    lastTap = 0; clearTimeout(tapT);
+    if (cur && cur.isMovie && x < .35) seekBy(-10, 'l'); else if (cur && cur.isMovie && x > .65) seekBy(10, 'r'); else $('fs').click();
+    return;
+  }
+  lastTap = now;
+  tapT = setTimeout(() => { stage.classList.contains('idle') || v.paused ? wake() : (clearTimeout(idleT), hide()); }, 260);
 };
-v.ondblclick = () => mode === 'watch' && $('fs').click();
 document.addEventListener('keydown', e => {
   if (mode !== 'watch' || /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName) && document.activeElement.type !== 'range') return;
   const k = e.key.toLowerCase();
   if (k === ' ' || k === 'k') { e.preventDefault(); toggle(); }
   else if (k === 'f') $('fs').click(); else if (k === 'm') $('mute').click(); else if (k === 'a') $('ratio').click();
+  else if (cur && cur.isMovie) {
+    const onRange = document.activeElement.type === 'range';
+    if (k === 'j') seekBy(-10, 'l'); else if (k === 'l') seekBy(10, 'r');
+    else if (e.key === 'ArrowLeft' && !onRange) seekBy(-5, 'l'); else if (e.key === 'ArrowRight' && !onRange) seekBy(5, 'r');
+    else if (/^[0-9]$/.test(k) && isFinite(v.duration)) v.currentTime = v.duration * (+k / 10);
+    else if (e.key === '>') stepSpeed(1); else if (e.key === '<') stepSpeed(-1);
+  }
 });
 function setPlayIcons() { const n = v.paused ? 'play' : 'pause'; setIcon($('play'), n); setIcon($('mPlay'), n); setIcon($('bigPlay'), n, 30); }
 v.onplay = v.onpause = () => { setPlayIcons(); re($('bigPlay'), 'bump'); wake(); };
@@ -687,7 +1097,7 @@ v.addEventListener('playing', () => { // sound but no picture? tell the user why
       fail("Audio is playing but this channel's video can't be shown. Its video format (often HEVC/H.265) may not be supported by this browser.");
   }, 4000);
 });
-v.onplaying = v.oncanplay = () => { spin(false); if (curVia > 0) proxyFails = 0; if (cur && bad.delete(cur.url)) saveSets(); if (cur && (!recent[0] || recent[0].url !== cur.url)) addRecent(cur); };
+v.onplaying = v.oncanplay = () => { spin(false); if (curVia > 0) proxyFails = 0; if (cur && !cur.isMovie && bad.delete(cur.url)) saveSets(); if (cur && !cur.isMovie && (!recent[0] || recent[0].url !== cur.url)) addRecent(cur); };
 $('vol').oninput = e => { v.volume = +e.target.value; v.muted = v.volume === 0; };
 $('mute').onclick = () => v.muted = !v.muted;
 v.onvolumechange = () => { setIcon($('mute'), v.muted || v.volume === 0 ? 'mute' : 'volume'); $('vol').value = v.muted ? 0 : v.volume; };
@@ -809,7 +1219,7 @@ $('theme').onclick = () => { re($('theme'), 'spin-once'); applyTheme(document.do
 // ---- Share ----
 $('shareBtn').onclick = async () => {
   if (!cur) return;
-  const u = location.origin + location.pathname + '?c=' + encodeURIComponent(chId(cur));
+  const u = location.origin + location.pathname + (cur.isMovie ? '?m=' + encodeURIComponent(cur.mid) : '?c=' + encodeURIComponent(chId(cur)));
   try { if (navigator.share) { await navigator.share({ title: cur.name + ' – JB TV', text: 'Watch ' + cur.name + ' live on JB TV', url: u }); return; } }
   catch (e) { if (e.name === 'AbortError') return; }
   try { await navigator.clipboard.writeText(u); toast('Link copied'); } catch (e) { prompt('Copy this link', u); }
@@ -823,6 +1233,10 @@ addEventListener('appinstalled', () => { $('installBtn').classList.add('hidden')
 addEventListener('offline', () => toast("You're offline – channels need internet"));
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 
+buildMovChips(); syncMat();
+const P0 = new URLSearchParams(location.search);
+if (P0.get('tab') === 'movies' || P0.get('m')) setTab('mov');
+if (P0.get('m')) openMovie(P0.get('m'));
 renderRecent();
 load();
 </script>
